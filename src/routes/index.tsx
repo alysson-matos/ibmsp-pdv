@@ -348,7 +348,45 @@ function PdvPage() {
         {lastSale && <Receipt sale={lastSale} onNew={() => setLastSale(null)} />}
       </section>
 
-      <aside className="flex h-fit flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-lg lg:sticky lg:top-[4.5rem]">
+      <aside className="flex h-fit flex-col gap-4 lg:sticky lg:top-[4.5rem]">
+        <div className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-lg">
+          <Label htmlFor="operator" className="text-xs uppercase tracking-widest text-muted-foreground">
+            Operador da venda <span className="text-destructive">*</span>
+          </Label>
+          {activeOperators.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum operador cadastrado.{" "}
+              <Link to="/operadores" className="text-primary underline">
+                Cadastrar operadores
+              </Link>
+            </p>
+          ) : (
+            <select
+              id="operator"
+              required
+              aria-required="true"
+              aria-invalid={!operatorId}
+              value={operatorId}
+              onChange={(e) => chooseOperator(e.target.value)}
+              className={cn(
+                "h-11 w-full rounded-md border bg-background px-3 text-sm",
+                operatorId ? "border-border" : "border-destructive/60",
+              )}
+            >
+              <option value="">Selecione o operador</option>
+              {activeOperators.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {!operatorId && activeOperators.length > 0 && (
+            <p className="text-xs text-destructive">Obrigatório selecionar o operador.</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-lg">
         <div className="space-y-1">
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Subtotal</span>
@@ -399,42 +437,6 @@ function PdvPage() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="operator" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Operador da venda <span className="text-destructive">*</span>
-          </Label>
-          {activeOperators.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhum operador cadastrado.{" "}
-              <Link to="/operadores" className="text-primary underline">
-                Cadastrar operadores
-              </Link>
-            </p>
-          ) : (
-            <select
-              id="operator"
-              required
-              aria-required="true"
-              aria-invalid={!operatorId}
-              value={operatorId}
-              onChange={(e) => chooseOperator(e.target.value)}
-              className={cn(
-                "h-11 w-full rounded-md border bg-background px-3 text-sm",
-                operatorId ? "border-border" : "border-destructive/60",
-              )}
-            >
-              <option value="">Selecione o operador</option>
-              {activeOperators.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {!operatorId && activeOperators.length > 0 && (
-            <p className="text-xs text-destructive">Obrigatório selecionar o operador.</p>
-          )}
-        </div>
 
         <div className="space-y-2">
           <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
@@ -487,6 +489,7 @@ function PdvPage() {
         >
           {mutation.isPending ? "Finalizando..." : "Finalizar venda"}
         </Button>
+        </div>
       </aside>
     </main>
   );
