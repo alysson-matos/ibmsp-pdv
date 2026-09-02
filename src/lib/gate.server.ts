@@ -11,9 +11,10 @@ function sessionConfig() {
     maxAge: 60 * 60 * 12,
     cookie: {
       httpOnly: true,
-      // secure cookies are dropped over plain http (local preview)
-      secure: process.env["NODE_ENV"] === "production",
-      sameSite: "lax" as const,
+      // The app can run inside a cross-site iframe (preview), where only
+      // SameSite=None; Secure cookies are sent back.
+      secure: true,
+      sameSite: "none" as const,
       path: "/",
     },
   };
