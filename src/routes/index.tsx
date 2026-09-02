@@ -46,19 +46,24 @@ const OPERATOR_STORAGE_KEY = "pdv:operator-id";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PDV do Guichê — Venda com leitor de código de barras" },
+      { title: "PDV - IBMemorial — Venda com leitor de código de barras" },
       {
         name: "description",
         content:
-          "Tela de venda do guichê: leia o código de barras, confira os produtos, o valor final e escolha a forma de pagamento.",
+          "PDV - IBMemorial: leia o código de barras, confira os produtos, o valor final e escolha a forma de pagamento.",
       },
-      { property: "og:title", content: "PDV do Guichê — Venda com leitor de código de barras" },
+      { property: "og:title", content: "PDV - IBMemorial — Venda com leitor de código de barras" },
       {
         property: "og:description",
         content: "Leitura de código de barras, carrinho, total e formas de pagamento em uma só tela.",
       },
+      { property: "og:url", content: "https://ibmsp-pdv.lovable.app/" },
+      { property: "og:image", content: `https://ibmsp-pdv.lovable.app${logoAsset.url}` },
+      { name: "twitter:image", content: `https://ibmsp-pdv.lovable.app${logoAsset.url}` },
     ],
+    links: [{ rel: "canonical", href: "https://ibmsp-pdv.lovable.app/" }],
   }),
+
   errorComponent: ({ error }) => (
     <div role="alert" className="p-8 text-destructive">
       {error.message}
