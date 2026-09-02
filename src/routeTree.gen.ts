@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ExpedicaoRouteImport } from './routes/expedicao'
 import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as InventarioRouteImport } from './routes/inventario'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpedicaoRoute = ExpedicaoRouteImport.update({
+  id: '/expedicao',
+  path: '/expedicao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoricoRoute = HistoricoRouteImport.update({
@@ -31,30 +37,34 @@ const InventarioRoute = InventarioRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/expedicao': typeof ExpedicaoRoute
   '/historico': typeof HistoricoRoute
   '/inventario': typeof InventarioRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/expedicao': typeof ExpedicaoRoute
   '/historico': typeof HistoricoRoute
   '/inventario': typeof InventarioRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/expedicao': typeof ExpedicaoRoute
   '/historico': typeof HistoricoRoute
   '/inventario': typeof InventarioRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/historico' | '/inventario'
+  fullPaths: '/' | '/expedicao' | '/historico' | '/inventario'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/historico' | '/inventario'
-  id: '__root__' | '/' | '/historico' | '/inventario'
+  to: '/' | '/expedicao' | '/historico' | '/inventario'
+  id: '__root__' | '/' | '/expedicao' | '/historico' | '/inventario'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ExpedicaoRoute: typeof ExpedicaoRoute
   HistoricoRoute: typeof HistoricoRoute
   InventarioRoute: typeof InventarioRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expedicao': {
+      id: '/expedicao'
+      path: '/expedicao'
+      fullPath: '/expedicao'
+      preLoaderRoute: typeof ExpedicaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/historico': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ExpedicaoRoute: ExpedicaoRoute,
   HistoricoRoute: HistoricoRoute,
   InventarioRoute: InventarioRoute,
 }
