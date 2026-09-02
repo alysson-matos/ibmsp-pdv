@@ -489,6 +489,7 @@ function PdvPage() {
         >
           {mutation.isPending ? "Finalizando..." : "Finalizar venda"}
         </Button>
+        </div>
       </aside>
     </main>
   );
