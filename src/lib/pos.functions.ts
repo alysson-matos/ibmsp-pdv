@@ -159,12 +159,14 @@ export const checkout = createServerFn({ method: "POST" })
     const { getServerSupabase } = await import("./pos.server");
     const supabase = getServerSupabase();
 
-    const { data: saleId, error } = await supabase.rpc("checkout_sale", {
+    const args = {
       _items: data.items,
       _payment_method: data.payment_method,
       _discount: data.discount,
-      _amount_received: data.amount_received ?? undefined,
-    });
+      ...(data.amount_received != null ? { _amount_received: data.amount_received } : {}),
+    };
+
+    const { data: saleId, error } = await supabase.rpc("checkout_sale", args);
     if (error) throw new Error(traduzErro(error.message));
 
     return await fetchSale(supabase, saleId as unknown as string);
