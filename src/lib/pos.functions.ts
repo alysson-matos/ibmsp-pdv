@@ -59,7 +59,7 @@ const num = (v: unknown) => Number(v ?? 0);
 
 export const listProducts = createServerFn({ method: "GET" }).handler(async (): Promise<Product[]> => {
   const { getServerSupabase } = await import("./pos.server");
-  const { data, error } = await getServerSupabase()
+  const { data, error } = (await getServerSupabase())
     .from("products")
     .select("id, barcode, name, price, stock, min_stock, active")
     .order("name", { ascending: true });
@@ -91,7 +91,7 @@ export const saveProduct = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => productInput.parse(data))
   .handler(async ({ data }) => {
     const { getServerSupabase } = await import("./pos.server");
-    const supabase = getServerSupabase();
+    const supabase = await getServerSupabase();
     const payload = {
       barcode: data.barcode,
       name: data.name,
@@ -120,7 +120,7 @@ export const deleteProduct = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
     const { getServerSupabase } = await import("./pos.server");
-    const { error } = await getServerSupabase().from("products").delete().eq("id", data.id);
+    const { error } = (await getServerSupabase()).from("products").delete().eq("id", data.id);
     if (error) throw new Error("Não foi possível excluir. Se o produto já tem vendas, desative-o.");
     return { ok: true };
   });
@@ -137,7 +137,7 @@ export const adjustStock = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { getServerSupabase } = await import("./pos.server");
-    const supabase = getServerSupabase();
+    const supabase = await getServerSupabase();
 
     const { data: product, error: readError } = await supabase
       .from("products")
@@ -179,7 +179,7 @@ export const checkout = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<Sale> => {
     const { getServerSupabase } = await import("./pos.server");
-    const supabase = getServerSupabase();
+    const supabase = await getServerSupabase();
 
     const args = {
       _items: data.items,
@@ -198,7 +198,7 @@ export const checkout = createServerFn({ method: "POST" })
 
 export const listShipping = createServerFn({ method: "GET" }).handler(async (): Promise<Sale[]> => {
   const { getServerSupabase } = await import("./pos.server");
-  const { data, error } = await getServerSupabase()
+  const { data, error } = (await getServerSupabase())
     .from("sales")
     .select(
       "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
@@ -216,7 +216,7 @@ export const setSaleStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { getServerSupabase } = await import("./pos.server");
-    const { error } = await getServerSupabase()
+    const { error } = (await getServerSupabase())
       .from("sales")
       .update({
         status: data.status,
@@ -239,7 +239,7 @@ export const listSales = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => salesFilter.parse(data ?? {}))
   .handler(async ({ data }): Promise<Sale[]> => {
     const { getServerSupabase } = await import("./pos.server");
-    const supabase = getServerSupabase();
+    const supabase = await getServerSupabase();
 
     let query = supabase
       .from("sales")
@@ -318,7 +318,7 @@ function traduzErro(message: string) {
 
 export const listOperators = createServerFn({ method: "GET" }).handler(async (): Promise<Operator[]> => {
   const { getServerSupabase } = await import("./pos.server");
-  const { data, error } = await getServerSupabase()
+  const { data, error } = (await getServerSupabase())
     .from("operators")
     .select("id, name, active")
     .order("name", { ascending: true });
@@ -338,7 +338,7 @@ export const saveOperator = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { getServerSupabase } = await import("./pos.server");
-    const supabase = getServerSupabase();
+    const supabase = await getServerSupabase();
     const payload = { name: data.name, active: data.active };
 
     if (data.id) {
@@ -360,7 +360,7 @@ export const deleteOperator = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
     const { getServerSupabase } = await import("./pos.server");
-    const { error } = await getServerSupabase().from("operators").delete().eq("id", data.id);
+    const { error } = (await getServerSupabase()).from("operators").delete().eq("id", data.id);
     if (error) throw new Error("Não foi possível excluir. Se o operador já tem vendas, desative-o.");
     return { ok: true };
   });
