@@ -72,6 +72,28 @@ function OperadoresPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const commitEdit = (op: { id: string; name: string; active: boolean }) => {
+    const trimmed = editingName.trim();
+    if (!trimmed) {
+      toast.error("Informe o nome do operador");
+      return;
+    }
+    if (trimmed === op.name) {
+      setEditingId(null);
+      return;
+    }
+    save.mutate(
+      { id: op.id, name: trimmed, active: op.active },
+      {
+        onSuccess: () => {
+          setEditingId(null);
+          toast.success("Nome atualizado");
+        },
+      },
+    );
+  };
+
+
   return (
     <main className="mx-auto max-w-3xl p-4">
       <h1 className="flex items-center gap-2 text-2xl font-bold">
