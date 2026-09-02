@@ -263,10 +263,11 @@ function RootComponent() {
                   setSigningOut(true);
                   try {
                     await queryClient.cancelQueries();
-                    await lockFn();
                     queryClient.clear();
+                    await lockFn();
                     await router.invalidate();
-                  } finally {
+                  } catch (error) {
+                    console.error(error);
                     setSigningOut(false);
                   }
                 }}
