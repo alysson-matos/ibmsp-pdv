@@ -214,8 +214,9 @@ function RootComponent() {
   const role = Route.useLoaderData() as GateRole | null;
   const router = useRouter();
   const lockFn = useServerFn(lock);
+  const [signingOut, setSigningOut] = useState(false);
 
-  if (!role) return <UnlockScreen />;
+  if (!role || signingOut) return <UnlockScreen />;
 
   const isAdmin = role === "admin";
   const visibleNav = navItems.filter((item) => isAdmin || !item.adminOnly);
@@ -255,10 +256,17 @@ function RootComponent() {
               </span>
               <button
                 onClick={async () => {
-                  await lockFn();
-                  queryClient.clear();
-                  await router.invalidate();
+                  setSigningOut(true);
+                  try {
+                    await queryClient.cancelQueries();
+                    await lockFn();
+                    queryClient.clear();
+                    await router.invalidate();
+                  } finally {
+                    setSigningOut(false);
+                  }
                 }}
+                disabled={signingOut}
                 className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
                 <LogOut className="size-3.5" />
