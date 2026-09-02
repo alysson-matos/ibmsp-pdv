@@ -480,7 +480,9 @@ function PdvPage() {
         <Button
           size="lg"
           className="h-14 text-base font-semibold"
-          disabled={cart.length === 0 || mutation.isPending}
+          disabled={
+            cart.length === 0 || mutation.isPending || !operatorId || !customer.trim()
+          }
           onClick={finalize}
         >
           {mutation.isPending ? "Finalizando..." : "Finalizar venda"}
