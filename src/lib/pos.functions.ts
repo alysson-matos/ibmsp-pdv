@@ -52,7 +52,7 @@ export type Sale = {
   items: SaleItem[];
 };
 
-export const PAYMENT_METHODS = ["dinheiro", "debito", "credito", "pix"] as const;
+export const PAYMENT_METHODS = ["credito", "debito", "pix", "dinheiro"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 const num = (v: unknown) => Number(v ?? 0);

@@ -93,7 +93,7 @@ function PdvPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [scan, setScan] = useState("");
   const [discount, setDiscount] = useState("");
-  const [payment, setPayment] = useState<PaymentMethod>("dinheiro");
+  const [payment, setPayment] = useState<PaymentMethod>("credito");
   const [received, setReceived] = useState("");
   const [customer, setCustomer] = useState("");
   const [operatorId, setOperatorId] = useState("");
