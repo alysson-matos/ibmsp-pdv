@@ -120,6 +120,7 @@ function HistoricoPage() {
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Data</th>
+              <th className="px-4 py-3">Comprador</th>
               <th className="px-4 py-3">Itens</th>
               <th className="px-4 py-3">Pagamento</th>
               <th className="px-4 py-3 text-right">Total</th>
@@ -134,6 +135,7 @@ function HistoricoPage() {
                   className="cursor-pointer hover:bg-secondary/30"
                 >
                   <td className="tabular px-4 py-3">{dateTime(sale.created_at)}</td>
+                  <td className="px-4 py-3">{sale.customer_name || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {sale.items.reduce((s, i) => s + i.quantity, 0)} un.
                   </td>
@@ -150,7 +152,7 @@ function HistoricoPage() {
                 </tr>
                 {openId === sale.id && (
                   <tr className="bg-secondary/20">
-                    <td colSpan={5} className="px-6 py-4">
+                    <td colSpan={6} className="px-6 py-4">
                       <ul className="space-y-1">
                         {sale.items.map((item) => (
                           <li key={item.id} className="flex justify-between gap-4">
@@ -182,7 +184,7 @@ function HistoricoPage() {
             ))}
             {sales.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                   Nenhuma venda no período selecionado.
                 </td>
               </tr>

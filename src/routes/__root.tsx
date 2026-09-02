@@ -8,7 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { ScanBarcode, Boxes, ReceiptText } from "lucide-react";
+import { ScanBarcode, Boxes, ReceiptText, PackageCheck } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -120,6 +120,7 @@ function RootShell({ children }: { children: ReactNode }) {
 const navItems = [
   { to: "/", label: "PDV", icon: ScanBarcode },
   { to: "/inventario", label: "Inventário", icon: Boxes },
+  { to: "/expedicao", label: "Expedição", icon: PackageCheck },
   { to: "/historico", label: "Histórico", icon: ReceiptText },
 ] as const;
 
