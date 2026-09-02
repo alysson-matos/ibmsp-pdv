@@ -172,10 +172,11 @@ function UnlockScreen() {
         onSubmit={onSubmit}
         className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg"
       >
-        <div className="flex items-center gap-2 text-primary">
+        <div className="flex items-center gap-3 text-primary">
+          <img src={logoAsset.url} alt="PDV - IBMemorial" className="h-8 w-auto object-contain" />
           <Lock className="size-5" />
-          <span className="text-sm font-bold uppercase tracking-[0.2em]">Guichê</span>
         </div>
+
         <h1 className="mt-4 text-lg font-semibold text-foreground">Acesso restrito</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Digite a senha para entrar no sistema.
