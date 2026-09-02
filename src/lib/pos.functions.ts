@@ -232,6 +232,7 @@ const salesFilter = z.object({
   to: z.string().optional(),
   payment_method: z.enum(["todas", ...PAYMENT_METHODS]).default("todas"),
   operator_id: z.string().default("todos"),
+  tz_offset: z.number().default(0),
 });
 
 export const listSales = createServerFn({ method: "GET" })
@@ -248,8 +249,14 @@ export const listSales = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(300);
 
-    if (data.from) query = query.gte("created_at", `${data.from}T00:00:00`);
-    if (data.to) query = query.lte("created_at", `${data.to}T23:59:59`);
+    // from/to are local calendar dates; convert to absolute instants using the client offset
+    const startOf = (day: string) =>
+      new Date(Date.parse(`${day}T00:00:00Z`) + data.tz_offset * 60000).toISOString();
+    const endOf = (day: string) =>
+      new Date(Date.parse(`${day}T23:59:59.999Z`) + data.tz_offset * 60000).toISOString();
+
+    if (data.from) query = query.gte("created_at", startOf(data.from));
+    if (data.to) query = query.lte("created_at", endOf(data.to));
     if (data.payment_method !== "todas") query = query.eq("payment_method", data.payment_method);
     if (data.operator_id && data.operator_id !== "todos")
       query = query.eq("operator_id", data.operator_id);
