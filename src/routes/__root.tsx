@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ScanBarcode,
@@ -260,13 +261,16 @@ function RootComponent() {
               </span>
               <button
                 onClick={async () => {
-                  setSigningOut(true);
+                  // Unmount protected routes before clearing the server session so
+                  // their active queries cannot refetch with an expired session.
+                  flushSync(() => setSigningOut(true));
                   try {
                     await queryClient.cancelQueries();
-                    await lockFn();
                     queryClient.clear();
+                    await lockFn();
                     await router.invalidate();
-                  } finally {
+                  } catch (error) {
+                    console.error(error);
                     setSigningOut(false);
                   }
                 }}
