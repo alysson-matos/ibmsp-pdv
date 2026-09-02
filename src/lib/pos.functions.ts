@@ -29,9 +29,17 @@ export const SALE_STATUS_LABEL: Record<SaleStatus, string> = {
   entregue: "Entregue",
 };
 
+export type Operator = {
+  id: string;
+  name: string;
+  active: boolean;
+};
+
 export type Sale = {
   id: string;
   customer_name: string;
+  operator_id: string | null;
+  operator_name: string;
   status: SaleStatus;
   delivered_at: string | null;
   subtotal: number;
@@ -163,6 +171,7 @@ export const checkout = createServerFn({ method: "POST" })
           .min(1, "Carrinho vazio"),
         payment_method: z.enum(PAYMENT_METHODS),
         customer_name: z.string().trim().min(1, "Informe o nome do comprador"),
+        operator_id: z.string().uuid("Selecione o operador"),
         discount: z.number().min(0).default(0),
         amount_received: z.number().min(0).nullable().default(null),
       })
@@ -176,6 +185,7 @@ export const checkout = createServerFn({ method: "POST" })
       _items: data.items,
       _payment_method: data.payment_method,
       _customer_name: data.customer_name,
+      _operator_id: data.operator_id,
       _discount: data.discount,
       ...(data.amount_received != null ? { _amount_received: data.amount_received } : {}),
     };
@@ -191,7 +201,7 @@ export const listShipping = createServerFn({ method: "GET" }).handler(async (): 
   const { data, error } = await getServerSupabase()
     .from("sales")
     .select(
-      "id, customer_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
+      "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
     )
     .order("created_at", { ascending: false })
     .limit(200);
@@ -221,6 +231,7 @@ const salesFilter = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   payment_method: z.enum(["todas", ...PAYMENT_METHODS]).default("todas"),
+  operator_id: z.string().default("todos"),
 });
 
 export const listSales = createServerFn({ method: "GET" })
@@ -232,7 +243,7 @@ export const listSales = createServerFn({ method: "GET" })
     let query = supabase
       .from("sales")
       .select(
-        "id, customer_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
+        "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
       )
       .order("created_at", { ascending: false })
       .limit(300);
@@ -240,6 +251,8 @@ export const listSales = createServerFn({ method: "GET" })
     if (data.from) query = query.gte("created_at", `${data.from}T00:00:00`);
     if (data.to) query = query.lte("created_at", `${data.to}T23:59:59`);
     if (data.payment_method !== "todas") query = query.eq("payment_method", data.payment_method);
+    if (data.operator_id && data.operator_id !== "todos")
+      query = query.eq("operator_id", data.operator_id);
 
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
@@ -252,6 +265,8 @@ function mapSale(row: Record<string, unknown>): Sale {
   return {
     id: row["id"] as string,
     customer_name: (row["customer_name"] as string | null) ?? "",
+    operator_id: (row["operator_id"] as string | null) ?? null,
+    operator_name: (row["operator_name"] as string | null) ?? "",
     status: ((row["status"] as string | null) ?? "pendente") as SaleStatus,
     delivered_at: (row["delivered_at"] as string | null) ?? null,
     subtotal: num(row["subtotal"]),
@@ -279,7 +294,7 @@ async function fetchSale(
   const { data, error } = await supabase
     .from("sales")
     .select(
-      "id, customer_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
+      "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
     )
     .eq("id", id)
     .single();
@@ -293,3 +308,52 @@ function traduzErro(message: string) {
   }
   return message;
 }
+
+export const listOperators = createServerFn({ method: "GET" }).handler(async (): Promise<Operator[]> => {
+  const { getServerSupabase } = await import("./pos.server");
+  const { data, error } = await getServerSupabase()
+    .from("operators")
+    .select("id, name, active")
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Operator[];
+});
+
+export const saveOperator = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        id: z.string().uuid().optional(),
+        name: z.string().trim().min(1, "Informe o nome do operador"),
+        active: z.boolean().default(true),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getServerSupabase } = await import("./pos.server");
+    const supabase = getServerSupabase();
+    const payload = { name: data.name, active: data.active };
+
+    if (data.id) {
+      const { error } = await supabase.from("operators").update(payload).eq("id", data.id);
+      if (error) throw new Error(error.message);
+      return { id: data.id };
+    }
+
+    const { data: created, error } = await supabase
+      .from("operators")
+      .insert(payload)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: created.id };
+  });
+
+export const deleteOperator = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { getServerSupabase } = await import("./pos.server");
+    const { error } = await getServerSupabase().from("operators").delete().eq("id", data.id);
+    if (error) throw new Error("Não foi possível excluir. Se o operador já tem vendas, desative-o.");
+    return { ok: true };
+  });

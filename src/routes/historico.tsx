@@ -3,13 +3,23 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { ReceiptText, ChevronDown } from "lucide-react";
 
-import { listSales, PAYMENT_METHODS, type PaymentMethod } from "@/lib/pos.functions";
+import { listOperators, listSales, PAYMENT_METHODS, type PaymentMethod } from "@/lib/pos.functions";
 import { brl, dateTime, PAYMENT_LABEL, todayISO } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-type Filters = { from: string; to: string; payment_method: "todas" | PaymentMethod };
+type Filters = {
+  from: string;
+  to: string;
+  payment_method: "todas" | PaymentMethod;
+  operator_id: string;
+};
+
+const operatorsQuery = queryOptions({
+  queryKey: ["operators"],
+  queryFn: () => listOperators(),
+});
 
 const salesQuery = (filters: Filters) =>
   queryOptions({
@@ -47,8 +57,10 @@ function HistoricoPage() {
     from: today,
     to: today,
     payment_method: "todas",
+    operator_id: "todos",
   });
   const { data: sales } = useSuspenseQuery(salesQuery(filters));
+  const { data: operators } = useSuspenseQuery(operatorsQuery);
   const [openId, setOpenId] = useState<string | null>(null);
 
   const revenue = sales.reduce((sum, s) => sum + s.total, 0);
@@ -88,6 +100,24 @@ function HistoricoPage() {
             className="tabular w-40"
           />
         </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="operator" className="text-xs uppercase tracking-widest text-muted-foreground">
+            Operador
+          </Label>
+          <select
+            id="operator"
+            value={filters.operator_id}
+            onChange={(e) => setFilters({ ...filters, operator_id: e.target.value })}
+            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+          >
+            <option value="todos">Todos</option>
+            {operators.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex flex-wrap gap-1.5">
           {(["todas", ...PAYMENT_METHODS] as const).map((m) => (
             <button
@@ -121,6 +151,7 @@ function HistoricoPage() {
             <tr>
               <th className="px-4 py-3">Data</th>
               <th className="px-4 py-3">Comprador</th>
+              <th className="px-4 py-3">Operador</th>
               <th className="px-4 py-3">Itens</th>
               <th className="px-4 py-3">Pagamento</th>
               <th className="px-4 py-3 text-right">Total</th>
@@ -136,6 +167,7 @@ function HistoricoPage() {
                 >
                   <td className="tabular px-4 py-3">{dateTime(sale.created_at)}</td>
                   <td className="px-4 py-3">{sale.customer_name || "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{sale.operator_name || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {sale.items.reduce((s, i) => s + i.quantity, 0)} un.
                   </td>
@@ -152,7 +184,7 @@ function HistoricoPage() {
                 </tr>
                 {openId === sale.id && (
                   <tr className="bg-secondary/20">
-                    <td colSpan={6} className="px-6 py-4">
+                    <td colSpan={7} className="px-6 py-4">
                       <ul className="space-y-1">
                         {sale.items.map((item) => (
                           <li key={item.id} className="flex justify-between gap-4">
@@ -184,7 +216,7 @@ function HistoricoPage() {
             ))}
             {sales.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                   Nenhuma venda no período selecionado.
                 </td>
               </tr>

@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      operators: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active: boolean
@@ -110,6 +134,8 @@ export type Database = {
           delivered_at: string | null
           discount: number
           id: string
+          operator_id: string | null
+          operator_name: string
           payment_method: string
           status: string
           subtotal: number
@@ -123,6 +149,8 @@ export type Database = {
           delivered_at?: string | null
           discount?: number
           id?: string
+          operator_id?: string | null
+          operator_name?: string
           payment_method: string
           status?: string
           subtotal?: number
@@ -136,12 +164,22 @@ export type Database = {
           delivered_at?: string | null
           discount?: number
           id?: string
+          operator_id?: string | null
+          operator_name?: string
           payment_method?: string
           status?: string
           subtotal?: number
           total?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sales_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_movements: {
         Row: {
@@ -196,6 +234,7 @@ export type Database = {
           _customer_name?: string
           _discount?: number
           _items: Json
+          _operator_id?: string
           _payment_method: string
         }
         Returns: string

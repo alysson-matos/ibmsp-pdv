@@ -8,7 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { ScanBarcode, Boxes, ReceiptText, PackageCheck } from "lucide-react";
+import { ScanBarcode, Boxes, ReceiptText, PackageCheck, Users } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -122,6 +122,7 @@ const navItems = [
   { to: "/inventario", label: "Inventário", icon: Boxes },
   { to: "/expedicao", label: "Expedição", icon: PackageCheck },
   { to: "/historico", label: "Histórico", icon: ReceiptText },
+  { to: "/operadores", label: "Operadores", icon: Users },
 ] as const;
 
 function RootComponent() {

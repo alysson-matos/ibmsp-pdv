@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -16,7 +16,15 @@ import {
   ShoppingCart,
 } from "lucide-react";
 
-import { checkout, listProducts, PAYMENT_METHODS, type PaymentMethod, type Product, type Sale } from "@/lib/pos.functions";
+import {
+  checkout,
+  listOperators,
+  listProducts,
+  PAYMENT_METHODS,
+  type PaymentMethod,
+  type Product,
+  type Sale,
+} from "@/lib/pos.functions";
 import { brl, PAYMENT_LABEL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +35,13 @@ const productsQuery = queryOptions({
   queryKey: ["products"],
   queryFn: () => listProducts(),
 });
+
+const operatorsQuery = queryOptions({
+  queryKey: ["operators"],
+  queryFn: () => listOperators(),
+});
+
+const OPERATOR_STORAGE_KEY = "pdv:operator-id";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,6 +61,7 @@ export const Route = createFileRoute("/")({
   }),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(productsQuery);
+    context.queryClient.ensureQueryData(operatorsQuery);
   },
   errorComponent: ({ error }) => (
     <div role="alert" className="p-8 text-destructive">
@@ -67,6 +83,7 @@ const paymentIcons: Record<PaymentMethod, typeof Banknote> = {
 
 function PdvPage() {
   const { data: products } = useSuspenseQuery(productsQuery);
+  const { data: operators } = useSuspenseQuery(operatorsQuery);
   const queryClient = useQueryClient();
   const checkoutFn = useServerFn(checkout);
 
@@ -76,6 +93,7 @@ function PdvPage() {
   const [payment, setPayment] = useState<PaymentMethod>("dinheiro");
   const [received, setReceived] = useState("");
   const [customer, setCustomer] = useState("");
+  const [operatorId, setOperatorId] = useState("");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +101,18 @@ function PdvPage() {
   useEffect(() => {
     focusScanner();
   }, [lastSale]);
+
+  const activeOperators = useMemo(() => operators.filter((o) => o.active), [operators]);
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem(OPERATOR_STORAGE_KEY) : null;
+    if (saved && activeOperators.some((o) => o.id === saved)) setOperatorId(saved);
+  }, [activeOperators]);
+
+  function chooseOperator(id: string) {
+    setOperatorId(id);
+    if (typeof window !== "undefined") localStorage.setItem(OPERATOR_STORAGE_KEY, id);
+  }
 
   const activeProducts = useMemo(() => products.filter((p) => p.active), [products]);
 
@@ -153,6 +183,7 @@ function PdvPage() {
       items: { product_id: string; quantity: number }[];
       payment_method: PaymentMethod;
       customer_name: string;
+      operator_id: string;
       discount: number;
       amount_received: number | null;
     }) => checkoutFn({ data: vars }),
@@ -178,6 +209,10 @@ function PdvPage() {
       toast.error("Informe o nome do comprador");
       return;
     }
+    if (!operatorId) {
+      toast.error("Selecione o operador da venda");
+      return;
+    }
     if (payment === "dinheiro" && received && receivedValue < total) {
       toast.error("Valor recebido menor que o total");
       return;
@@ -186,6 +221,7 @@ function PdvPage() {
       items: cart.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
       payment_method: payment,
       customer_name: customer.trim(),
+      operator_id: operatorId,
       discount: discountValue,
       amount_received: payment === "dinheiro" && received ? receivedValue : null,
     });
@@ -368,6 +404,34 @@ function PdvPage() {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="operator" className="text-xs uppercase tracking-widest text-muted-foreground">
+            Operador da venda
+          </Label>
+          {activeOperators.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum operador cadastrado.{" "}
+              <Link to="/operadores" className="text-primary underline">
+                Cadastrar operadores
+              </Link>
+            </p>
+          ) : (
+            <select
+              id="operator"
+              value={operatorId}
+              onChange={(e) => chooseOperator(e.target.value)}
+              className="h-11 w-full rounded-md border border-border bg-background px-3 text-sm"
+            >
+              <option value="">Selecione o operador</option>
+              {activeOperators.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
             Nome do comprador
           </Label>
@@ -427,8 +491,9 @@ function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
         </Button>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        Comprador: <span className="font-semibold text-foreground">{sale.customer_name}</span> · retirada
-        na expedição
+        Comprador: <span className="font-semibold text-foreground">{sale.customer_name}</span> ·
+        Operador: <span className="font-semibold text-foreground">{sale.operator_name || "—"}</span> ·
+        retirada na expedição
       </p>
       <ul className="mt-3 space-y-1 text-sm">
         {sale.items.map((item) => (
