@@ -380,7 +380,7 @@ function PdvPage() {
               value={operatorId}
               onChange={(e) => chooseOperator(e.target.value)}
               className={cn(
-                "mt-2 h-14 w-full rounded-lg border-2 bg-background px-3 text-base",
+                "mt-2 h-[3.75rem] w-full rounded-lg border-2 bg-background px-3 text-base",
                 operatorId ? "border-primary/40" : "border-destructive/60",
               )}
             >
