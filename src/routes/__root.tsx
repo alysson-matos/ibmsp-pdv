@@ -137,9 +137,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 const navItems = [
   { to: "/", label: "PDV", icon: ScanBarcode, adminOnly: false },
-  { to: "/inventario", label: "Inventário", icon: Boxes, adminOnly: true },
   { to: "/expedicao", label: "Expedição", icon: PackageCheck, adminOnly: false },
   { to: "/historico", label: "Histórico", icon: ReceiptText, adminOnly: true },
+  { to: "/inventario", label: "Inventário", icon: Boxes, adminOnly: true },
   { to: "/operadores", label: "Operadores", icon: Users, adminOnly: true },
 ] as const;
 
