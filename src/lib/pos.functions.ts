@@ -20,8 +20,20 @@ export type SaleItem = {
   subtotal: number;
 };
 
+export const SALE_STATUSES = ["pendente", "separado", "entregue"] as const;
+export type SaleStatus = (typeof SALE_STATUSES)[number];
+
+export const SALE_STATUS_LABEL: Record<SaleStatus, string> = {
+  pendente: "A separar",
+  separado: "Separado",
+  entregue: "Entregue",
+};
+
 export type Sale = {
   id: string;
+  customer_name: string;
+  status: SaleStatus;
+  delivered_at: string | null;
   subtotal: number;
   discount: number;
   total: number;
@@ -150,6 +162,7 @@ export const checkout = createServerFn({ method: "POST" })
           .array(z.object({ product_id: z.string().uuid(), quantity: z.number().int().positive() }))
           .min(1, "Carrinho vazio"),
         payment_method: z.enum(PAYMENT_METHODS),
+        customer_name: z.string().trim().min(1, "Informe o nome do comprador"),
         discount: z.number().min(0).default(0),
         amount_received: z.number().min(0).nullable().default(null),
       })
@@ -162,6 +175,7 @@ export const checkout = createServerFn({ method: "POST" })
     const args = {
       _items: data.items,
       _payment_method: data.payment_method,
+      _customer_name: data.customer_name,
       _discount: data.discount,
       ...(data.amount_received != null ? { _amount_received: data.amount_received } : {}),
     };
@@ -170,6 +184,37 @@ export const checkout = createServerFn({ method: "POST" })
     if (error) throw new Error(traduzErro(error.message));
 
     return await fetchSale(supabase, saleId as unknown as string);
+  });
+
+export const listShipping = createServerFn({ method: "GET" }).handler(async (): Promise<Sale[]> => {
+  const { getServerSupabase } = await import("./pos.server");
+  const { data, error } = await getServerSupabase()
+    .from("sales")
+    .select(
+      "id, customer_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => mapSale(row as unknown as Record<string, unknown>));
+});
+
+export const setSaleStatus = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z.object({ id: z.string().uuid(), status: z.enum(SALE_STATUSES) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getServerSupabase } = await import("./pos.server");
+    const { error } = await getServerSupabase()
+      .from("sales")
+      .update({
+        status: data.status,
+        delivered_at: data.status === "entregue" ? new Date().toISOString() : null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 const salesFilter = z.object({
@@ -187,7 +232,7 @@ export const listSales = createServerFn({ method: "GET" })
     let query = supabase
       .from("sales")
       .select(
-        "id, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
+        "id, customer_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
       )
       .order("created_at", { ascending: false })
       .limit(300);
@@ -206,6 +251,9 @@ function mapSale(row: Record<string, unknown>): Sale {
   const items = (row["sale_items"] ?? []) as Record<string, unknown>[];
   return {
     id: row["id"] as string,
+    customer_name: (row["customer_name"] as string | null) ?? "",
+    status: ((row["status"] as string | null) ?? "pendente") as SaleStatus,
+    delivered_at: (row["delivered_at"] as string | null) ?? null,
     subtotal: num(row["subtotal"]),
     discount: num(row["discount"]),
     total: num(row["total"]),
@@ -231,7 +279,7 @@ async function fetchSale(
   const { data, error } = await supabase
     .from("sales")
     .select(
-      "id, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
+      "id, customer_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
     )
     .eq("id", id)
     .single();
