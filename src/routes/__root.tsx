@@ -234,11 +234,10 @@ function RootComponent() {
         <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-6 px-4">
             <Link to="/" className="flex items-center gap-2">
-              <span className="grid size-7 place-items-center rounded bg-primary text-primary-foreground">
-                <ScanBarcode className="size-4" />
-              </span>
-              <span className="text-sm font-bold uppercase tracking-[0.2em]">Guichê</span>
+              <img src={logoAsset.url} alt="PDV - IBMemorial" className="h-7 w-auto object-contain" />
+              <span className="sr-only">PDV - IBMemorial</span>
             </Link>
+
             <nav className="flex items-center gap-1">
               {visibleNav.map(({ to, label, icon: Icon }) => (
                 <Link
