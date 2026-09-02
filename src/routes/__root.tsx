@@ -240,9 +240,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
-          <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-6 px-4">
+          <div className="mx-auto flex h-20 max-w-[1600px] items-center gap-6 px-4">
             <Link to="/" className="flex items-center gap-2">
-              <img src={logoAsset.url} alt="PDV - IBMemorial" className="h-7 w-auto object-contain" />
+              <img src={logoAsset.url} alt="PDV - IBMemorial" className="h-14 w-auto object-contain" />
               <span className="sr-only">PDV - IBMemorial</span>
             </Link>
 
