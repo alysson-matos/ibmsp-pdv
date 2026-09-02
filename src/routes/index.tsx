@@ -59,10 +59,6 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(productsQuery);
-    context.queryClient.ensureQueryData(operatorsQuery);
-  },
   errorComponent: ({ error }) => (
     <div role="alert" className="p-8 text-destructive">
       {error.message}

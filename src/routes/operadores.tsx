@@ -34,9 +34,6 @@ export const Route = createFileRoute("/operadores")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(operatorsQuery);
-  },
   errorComponent: ({ error }) => (
     <div role="alert" className="p-8 text-destructive">
       {error.message}

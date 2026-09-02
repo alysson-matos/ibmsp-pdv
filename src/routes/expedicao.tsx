@@ -38,9 +38,6 @@ export const Route = createFileRoute("/expedicao")({
       },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(shippingQuery);
-  },
   errorComponent: ({ error }) => (
     <div role="alert" className="p-8 text-destructive">
       {error.message}
