@@ -401,7 +401,7 @@ function PdvPage() {
 
         <div className="space-y-2">
           <Label htmlFor="operator" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Operador da venda
+            Operador da venda <span className="text-destructive">*</span>
           </Label>
           {activeOperators.length === 0 ? (
             <p className="text-sm text-muted-foreground">
@@ -413,9 +413,15 @@ function PdvPage() {
           ) : (
             <select
               id="operator"
+              required
+              aria-required="true"
+              aria-invalid={!operatorId}
               value={operatorId}
               onChange={(e) => chooseOperator(e.target.value)}
-              className="h-11 w-full rounded-md border border-border bg-background px-3 text-sm"
+              className={cn(
+                "h-11 w-full rounded-md border bg-background px-3 text-sm",
+                operatorId ? "border-border" : "border-destructive/60",
+              )}
             >
               <option value="">Selecione o operador</option>
               {activeOperators.map((o) => (
@@ -425,19 +431,28 @@ function PdvPage() {
               ))}
             </select>
           )}
+          {!operatorId && activeOperators.length > 0 && (
+            <p className="text-xs text-destructive">Obrigatório selecionar o operador.</p>
+          )}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Nome do comprador
+            Nome do comprador <span className="text-destructive">*</span>
           </Label>
           <Input
             id="customer"
+            required
+            aria-required="true"
+            aria-invalid={!customer.trim()}
             value={customer}
             onChange={(e) => setCustomer(e.target.value)}
             placeholder="Quem vai retirar os produtos"
-            className="h-11"
+            className={cn("h-11", !customer.trim() && "border-destructive/60")}
           />
+          {!customer.trim() && (
+            <p className="text-xs text-destructive">Obrigatório informar o comprador.</p>
+          )}
         </div>
 
         {payment === "dinheiro" && (
