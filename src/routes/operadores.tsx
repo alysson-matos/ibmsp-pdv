@@ -3,7 +3,7 @@ import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@ta
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Users, Trash2 } from "lucide-react";
+import { Users, Trash2, Pencil } from "lucide-react";
 
 import { deleteOperator, listOperators, saveOperator } from "@/lib/pos.functions";
 import { Button } from "@/components/ui/button";
