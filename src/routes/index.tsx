@@ -232,7 +232,16 @@ function PdvPage() {
 
   return (
     <main className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-[1fr_400px]">
-      <h1 className="sr-only">Ponto de venda do guichê</h1>
+      <h1 className="sr-only">PDV - IBMemorial</h1>
+
+      <div className="flex justify-center rounded-xl border border-border bg-card p-6 shadow-lg lg:col-span-2">
+        <img
+          src={logoAsset.url}
+          alt="PDV - IBMemorial"
+          className="h-16 w-auto object-contain"
+        />
+      </div>
+
 
       <section className="flex flex-col gap-4">
         <form
