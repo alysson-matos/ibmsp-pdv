@@ -1,24 +1,438 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  ScanBarcode,
+  Trash2,
+  Plus,
+  Minus,
+  Banknote,
+  CreditCard,
+  QrCode,
+  Wallet,
+  CheckCircle2,
+  ShoppingCart,
+} from "lucide-react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
-export const Route = createFileRoute("/")({
-  component: Index,
+import { checkout, listProducts, PAYMENT_METHODS, type PaymentMethod, type Product, type Sale } from "@/lib/pos.functions";
+import { brl, PAYMENT_LABEL } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
+const productsQuery = queryOptions({
+  queryKey: ["products"],
+  queryFn: () => listProducts(),
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "PDV do Guichê — Venda com leitor de código de barras" },
+      {
+        name: "description",
+        content:
+          "Tela de venda do guichê: leia o código de barras, confira os produtos, o valor final e escolha a forma de pagamento.",
+      },
+      { property: "og:title", content: "PDV do Guichê — Venda com leitor de código de barras" },
+      {
+        property: "og:description",
+        content: "Leitura de código de barras, carrinho, total e formas de pagamento em uma só tela.",
+      },
+    ],
+  }),
+  loader: ({ context }) => {
+    context.queryClient.ensureQueryData(productsQuery);
+  },
+  errorComponent: ({ error }) => (
+    <div role="alert" className="p-8 text-destructive">
+      {error.message}
+    </div>
+  ),
+  notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  component: PdvPage,
+});
+
+type CartLine = { product: Product; quantity: number };
+
+const paymentIcons: Record<PaymentMethod, typeof Banknote> = {
+  dinheiro: Banknote,
+  debito: CreditCard,
+  credito: Wallet,
+  pix: QrCode,
+};
+
+function PdvPage() {
+  const { data: products } = useSuspenseQuery(productsQuery);
+  const queryClient = useQueryClient();
+  const checkoutFn = useServerFn(checkout);
+
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [scan, setScan] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [payment, setPayment] = useState<PaymentMethod>("dinheiro");
+  const [received, setReceived] = useState("");
+  const [lastSale, setLastSale] = useState<Sale | null>(null);
+  const scanRef = useRef<HTMLInputElement>(null);
+
+  const focusScanner = () => scanRef.current?.focus();
+  useEffect(() => {
+    focusScanner();
+  }, [lastSale]);
+
+  const activeProducts = useMemo(() => products.filter((p) => p.active), [products]);
+
+  const suggestions = useMemo(() => {
+    const term = scan.trim().toLowerCase();
+    if (term.length < 2) return [];
+    return activeProducts
+      .filter((p) => p.name.toLowerCase().includes(term) || p.barcode.includes(term))
+      .slice(0, 6);
+  }, [scan, activeProducts]);
+
+  const subtotal = cart.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
+  const discountValue = Math.min(Math.max(Number(discount.replace(",", ".")) || 0, 0), subtotal);
+  const total = subtotal - discountValue;
+  const receivedValue = Number(received.replace(",", ".")) || 0;
+  const change = payment === "dinheiro" && receivedValue > 0 ? receivedValue - total : 0;
+
+  function addProduct(product: Product) {
+    setLastSale(null);
+    setCart((prev) => {
+      const existing = prev.find((l) => l.product.id === product.id);
+      const currentQty = existing?.quantity ?? 0;
+      if (currentQty + 1 > product.stock) {
+        toast.error(`Estoque insuficiente: restam ${product.stock} un. de ${product.name}`);
+        return prev;
+      }
+      if (existing) {
+        return prev.map((l) =>
+          l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l,
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+  }
+
+  function handleScanSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const code = scan.trim();
+    if (!code) return;
+
+    const byBarcode = activeProducts.find((p) => p.barcode === code);
+    const match = byBarcode ?? (suggestions.length === 1 ? suggestions[0] : undefined);
+
+    if (!match) {
+      toast.error(`Produto não encontrado para "${code}"`);
+      return;
+    }
+    addProduct(match);
+    setScan("");
+  }
+
+  function setQuantity(productId: string, quantity: number) {
+    setCart((prev) =>
+      prev.flatMap((l) => {
+        if (l.product.id !== productId) return [l];
+        if (quantity <= 0) return [];
+        if (quantity > l.product.stock) {
+          toast.error(`Restam apenas ${l.product.stock} un. de ${l.product.name}`);
+          return [l];
+        }
+        return [{ ...l, quantity }];
+      }),
+    );
+  }
+
+  const mutation = useMutation({
+    mutationFn: (vars: {
+      items: { product_id: string; quantity: number }[];
+      payment_method: PaymentMethod;
+      discount: number;
+      amount_received: number | null;
+    }) => checkoutFn({ data: vars }),
+    onSuccess: (sale) => {
+      setLastSale(sale);
+      setCart([]);
+      setDiscount("");
+      setReceived("");
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["sales"] });
+      toast.success("Venda finalizada!");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  function finalize() {
+    if (cart.length === 0) {
+      toast.error("Adicione produtos ao carrinho");
+      return;
+    }
+    if (payment === "dinheiro" && received && receivedValue < total) {
+      toast.error("Valor recebido menor que o total");
+      return;
+    }
+    mutation.mutate({
+      items: cart.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
+      payment_method: payment,
+      discount: discountValue,
+      amount_received: payment === "dinheiro" && received ? receivedValue : null,
+    });
+  }
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <main className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-[1fr_400px]">
+      <h1 className="sr-only">Ponto de venda do guichê</h1>
+
+      <section className="flex flex-col gap-4">
+        <form
+          onSubmit={handleScanSubmit}
+          className="rounded-xl border border-border bg-card p-4 shadow-lg"
+        >
+          <Label htmlFor="scan" className="text-xs uppercase tracking-widest text-muted-foreground">
+            Leitor de código de barras
+          </Label>
+          <div className="mt-2 flex items-center gap-3 rounded-lg border-2 border-primary/40 bg-background px-3 focus-within:border-primary">
+            <ScanBarcode className="size-6 shrink-0 text-primary" />
+            <Input
+              id="scan"
+              ref={scanRef}
+              autoFocus
+              autoComplete="off"
+              value={scan}
+              onChange={(e) => setScan(e.target.value)}
+              placeholder="Passe o produto no leitor ou digite o código / nome"
+              className="tabular h-14 border-0 bg-transparent text-lg shadow-none focus-visible:ring-0"
+            />
+            <Button type="submit" size="sm" className="shrink-0">
+              Adicionar
+            </Button>
+          </div>
+
+          {suggestions.length > 0 && (
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+              {suggestions.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      addProduct(p);
+                      setScan("");
+                      focusScanner();
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-left transition-colors hover:border-primary/60 hover:bg-secondary"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">{p.name}</span>
+                      <span className="tabular block text-xs text-muted-foreground">{p.barcode}</span>
+                    </span>
+                    <span className="tabular text-sm font-semibold text-primary">{brl(p.price)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </form>
+
+        <div className="min-h-[320px] rounded-xl border border-border bg-card shadow-lg">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest">
+              <ShoppingCart className="size-4 text-primary" /> Carrinho
+            </h2>
+            {cart.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setCart([])}>
+                Limpar
+              </Button>
+            )}
+          </div>
+
+          {cart.length === 0 ? (
+            <div className="grid place-items-center gap-2 px-4 py-16 text-center text-muted-foreground">
+              <ScanBarcode className="size-10 opacity-40" />
+              <p className="text-sm">Nenhum item. Passe o primeiro produto no leitor.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {cart.map((line) => (
+                <li key={line.product.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{line.product.name}</p>
+                    <p className="tabular text-xs text-muted-foreground">
+                      {line.product.barcode} · {brl(line.product.price)} un.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8"
+                      onClick={() => setQuantity(line.product.id, line.quantity - 1)}
+                      aria-label="Diminuir quantidade"
+                    >
+                      <Minus className="size-4" />
+                    </Button>
+                    <span className="tabular w-8 text-center text-base font-semibold">
+                      {line.quantity}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8"
+                      onClick={() => setQuantity(line.product.id, line.quantity + 1)}
+                      aria-label="Aumentar quantidade"
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                  <span className="tabular w-24 text-right font-semibold">
+                    {brl(line.product.price * line.quantity)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => setQuantity(line.product.id, 0)}
+                    aria-label="Remover item"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {lastSale && <Receipt sale={lastSale} onNew={() => setLastSale(null)} />}
+      </section>
+
+      <aside className="flex h-fit flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-lg lg:sticky lg:top-[4.5rem]">
+        <div className="space-y-1">
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>Subtotal</span>
+            <span className="tabular">{brl(subtotal)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+            <Label htmlFor="discount">Desconto</Label>
+            <Input
+              id="discount"
+              inputMode="decimal"
+              value={discount}
+              onChange={(e) => setDiscount(e.target.value)}
+              placeholder="0,00"
+              className="tabular h-8 w-28 text-right"
+            />
+          </div>
+        </div>
+
+        <div className="rounded-lg bg-secondary/60 p-4">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Total a pagar</p>
+          <p className="tabular mt-1 text-4xl font-bold text-primary">{brl(total)}</p>
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
+            Forma de pagamento
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {PAYMENT_METHODS.map((method) => {
+              const Icon = paymentIcons[method];
+              return (
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() => setPayment(method)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
+                    payment === method
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-4" />
+                  {PAYMENT_LABEL[method]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {payment === "dinheiro" && (
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <Label htmlFor="received" className="text-xs uppercase tracking-widest text-muted-foreground">
+              Valor recebido
+            </Label>
+            <Input
+              id="received"
+              inputMode="decimal"
+              value={received}
+              onChange={(e) => setReceived(e.target.value)}
+              placeholder="0,00"
+              className="tabular h-11 text-lg"
+            />
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Troco</span>
+              <span className={cn("tabular font-semibold", change < 0 && "text-destructive")}>
+                {brl(Math.max(change, 0))}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <Button
+          size="lg"
+          className="h-14 text-base font-semibold"
+          disabled={cart.length === 0 || mutation.isPending}
+          onClick={finalize}
+        >
+          {mutation.isPending ? "Finalizando..." : "Finalizar venda"}
+        </Button>
+      </aside>
+    </main>
+  );
+}
+
+function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
+  return (
+    <div className="rounded-xl border border-accent/50 bg-accent/10 p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 font-semibold text-accent">
+          <CheckCircle2 className="size-5" /> Venda registrada
+        </h2>
+        <Button size="sm" variant="outline" onClick={onNew}>
+          Nova venda
+        </Button>
+      </div>
+      <ul className="mt-3 space-y-1 text-sm">
+        {sale.items.map((item) => (
+          <li key={item.id} className="flex justify-between gap-4">
+            <span className="truncate">
+              {item.quantity}× {item.product_name}
+            </span>
+            <span className="tabular">{brl(item.subtotal)}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-3 border-t border-border pt-3 text-sm">
+        {sale.discount > 0 && (
+          <div className="flex justify-between text-muted-foreground">
+            <span>Desconto</span>
+            <span className="tabular">-{brl(sale.discount)}</span>
+          </div>
+        )}
+        <div className="flex justify-between font-semibold">
+          <span>Total · {PAYMENT_LABEL[sale.payment_method]}</span>
+          <span className="tabular">{brl(sale.total)}</span>
+        </div>
+        {sale.payment_method === "dinheiro" && sale.amount_received != null && (
+          <div className="flex justify-between text-muted-foreground">
+            <span>Recebido {brl(sale.amount_received)} · Troco</span>
+            <span className="tabular">{brl(sale.change_amount)}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
