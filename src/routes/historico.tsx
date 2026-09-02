@@ -14,6 +14,7 @@ type Filters = {
   to: string;
   payment_method: "todas" | PaymentMethod;
   operator_id: string;
+  tz_offset: number;
 };
 
 const operatorsQuery = queryOptions({
@@ -58,6 +59,7 @@ function HistoricoPage() {
     to: today,
     payment_method: "todas",
     operator_id: "todos",
+    tz_offset: new Date().getTimezoneOffset(),
   });
   const { data: sales } = useSuspenseQuery(salesQuery(filters));
   const { data: operators } = useSuspenseQuery(operatorsQuery);
