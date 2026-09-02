@@ -49,6 +49,8 @@ function OperadoresPage() {
   const saveFn = useServerFn(saveOperator);
   const deleteFn = useServerFn(deleteOperator);
   const [name, setName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["operators"] });
 
