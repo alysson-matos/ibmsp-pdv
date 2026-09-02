@@ -6,7 +6,10 @@ import type { Database } from "@/integrations/supabase/types";
  * These tables are closed to the browser (no anon/authenticated grants, RLS with no
  * policies), so every read/write goes through server functions using the service role.
  */
-export function getServerSupabase() {
+export async function getServerSupabase(scope: "admin" | "any" = "admin") {
+  const { requireRole } = await import("./gate.server");
+  await requireRole(scope);
+
   const key = process.env["SUPABASE_SERVICE_ROLE_KEY"]!;
   const url = process.env["SUPABASE_URL"]!;
 
