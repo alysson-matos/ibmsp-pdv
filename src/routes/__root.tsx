@@ -25,6 +25,8 @@ import { getRole, unlock, lock, type GateRole } from "../lib/gate.functions";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
+
 
 function NotFoundComponent() {
   return (
