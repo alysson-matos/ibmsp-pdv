@@ -14,13 +14,182 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      products: {
+        Row: {
+          active: boolean
+          barcode: string
+          created_at: string
+          id: string
+          min_stock: number
+          name: string
+          price: number
+          stock: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          barcode: string
+          created_at?: string
+          id?: string
+          min_stock?: number
+          name: string
+          price?: number
+          stock?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          barcode?: string
+          created_at?: string
+          id?: string
+          min_stock?: number
+          name?: string
+          price?: number
+          stock?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sale_items: {
+        Row: {
+          barcode: string | null
+          created_at: string
+          id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          sale_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          barcode?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name: string
+          quantity: number
+          sale_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          barcode?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          sale_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          amount_received: number | null
+          change_amount: number
+          created_at: string
+          discount: number
+          id: string
+          payment_method: string
+          subtotal: number
+          total: number
+        }
+        Insert: {
+          amount_received?: number | null
+          change_amount?: number
+          created_at?: string
+          discount?: number
+          id?: string
+          payment_method: string
+          subtotal?: number
+          total?: number
+        }
+        Update: {
+          amount_received?: number | null
+          change_amount?: number
+          created_at?: string
+          discount?: number
+          id?: string
+          payment_method?: string
+          subtotal?: number
+          total?: number
+        }
+        Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          product_id: string
+          reason: string
+          sale_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          product_id: string
+          reason?: string
+          sale_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          product_id?: string
+          reason?: string
+          sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      checkout_sale: {
+        Args: {
+          _amount_received?: number
+          _discount?: number
+          _items: Json
+          _payment_method: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
