@@ -165,6 +165,13 @@ function OperadoresPage() {
                   {op.active ? "Ativo" : "Inativo"}
                 </span>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => save.mutate({ id: op.id, name: op.name, active: !op.active })}
+                >
+                  {op.active ? "Desativar" : "Ativar"}
+                </Button>
+                <Button
                   variant="ghost"
                   size="icon"
                   className="size-8 text-muted-foreground hover:text-foreground"
@@ -177,13 +184,6 @@ function OperadoresPage() {
                   <Pencil className="size-4" />
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => save.mutate({ id: op.id, name: op.name, active: !op.active })}
-                >
-                  {op.active ? "Desativar" : "Ativar"}
-                </Button>
-                <Button
                   variant="ghost"
                   size="icon"
                   className="size-8 text-muted-foreground hover:text-destructive"
@@ -192,6 +192,7 @@ function OperadoresPage() {
                 >
                   <Trash2 className="size-4" />
                 </Button>
+
               </>
             )}
           </li>
