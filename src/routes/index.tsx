@@ -359,10 +359,11 @@ function PdvPage() {
       </section>
 
       <aside className="flex h-fit flex-col gap-4 lg:sticky lg:top-[4.5rem]">
-        <div className="space-y-2 rounded-xl border border-border bg-card p-4 shadow-lg">
+        <div className="rounded-xl border border-border bg-card p-4 shadow-lg">
           <Label htmlFor="operator" className="text-xs uppercase tracking-widest text-muted-foreground">
             Operador da venda <span className="text-destructive">*</span>
           </Label>
+
           {activeOperators.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nenhum operador cadastrado.{" "}
