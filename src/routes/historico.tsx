@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ReceiptText, ChevronDown } from "lucide-react";
 
 import { listSales, PAYMENT_METHODS, type PaymentMethod } from "@/lib/pos.functions";
@@ -128,9 +128,8 @@ function HistoricoPage() {
           </thead>
           <tbody className="divide-y divide-border">
             {sales.map((sale) => (
-              <>
+              <Fragment key={sale.id}>
                 <tr
-                  key={sale.id}
                   onClick={() => setOpenId(openId === sale.id ? null : sale.id)}
                   className="cursor-pointer hover:bg-secondary/30"
                 >
@@ -150,7 +149,7 @@ function HistoricoPage() {
                   </td>
                 </tr>
                 {openId === sale.id && (
-                  <tr key={`${sale.id}-detail`} className="bg-secondary/20">
+                  <tr className="bg-secondary/20">
                     <td colSpan={5} className="px-6 py-4">
                       <ul className="space-y-1">
                         {sale.items.map((item) => (
@@ -179,7 +178,7 @@ function HistoricoPage() {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
             {sales.length === 0 && (
               <tr>
