@@ -89,13 +89,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Guichê PDV — Vendas e Estoque" },
+      { title: "PDV - IBMemorial" },
       {
         name: "description",
         content:
-          "Ponto de venda de guichê com leitor de código de barras, controle de inventário e histórico de vendas.",
+          "PDV - IBMemorial: ponto de venda com leitor de código de barras, controle de inventário e histórico de vendas.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "PDV - IBMemorial" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -106,9 +107,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
   }),
+
   loader: () => getRole(),
   shellComponent: RootShell,
   component: RootComponent,
