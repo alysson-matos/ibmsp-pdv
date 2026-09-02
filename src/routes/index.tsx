@@ -365,7 +365,7 @@ function PdvPage() {
           </Label>
 
           {activeOperators.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               Nenhum operador cadastrado.{" "}
               <Link to="/operadores" className="text-primary underline">
                 Cadastrar operadores
@@ -380,8 +380,8 @@ function PdvPage() {
               value={operatorId}
               onChange={(e) => chooseOperator(e.target.value)}
               className={cn(
-                "h-11 w-full rounded-md border bg-background px-3 text-sm",
-                operatorId ? "border-border" : "border-destructive/60",
+                "mt-2 h-14 w-full rounded-lg border-2 bg-background px-3 text-base",
+                operatorId ? "border-primary/40" : "border-destructive/60",
               )}
             >
               <option value="">Selecione o operador</option>
@@ -393,7 +393,8 @@ function PdvPage() {
             </select>
           )}
           {!operatorId && activeOperators.length > 0 && (
-            <p className="text-xs text-destructive">Obrigatório selecionar o operador.</p>
+            <p className="mt-2 text-xs text-destructive">Obrigatório selecionar o operador.</p>
+
           )}
         </div>
 
