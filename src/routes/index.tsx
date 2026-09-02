@@ -30,6 +30,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
+
 
 const productsQuery = queryOptions({
   queryKey: ["products"],
