@@ -163,7 +163,7 @@ export const checkout = createServerFn({ method: "POST" })
       _items: data.items,
       _payment_method: data.payment_method,
       _discount: data.discount,
-      _amount_received: data.amount_received,
+      _amount_received: data.amount_received ?? undefined,
     });
     if (error) throw new Error(traduzErro(error.message));
 
