@@ -106,9 +106,12 @@ export type Database = {
           amount_received: number | null
           change_amount: number
           created_at: string
+          customer_name: string
+          delivered_at: string | null
           discount: number
           id: string
           payment_method: string
+          status: string
           subtotal: number
           total: number
         }
@@ -116,9 +119,12 @@ export type Database = {
           amount_received?: number | null
           change_amount?: number
           created_at?: string
+          customer_name?: string
+          delivered_at?: string | null
           discount?: number
           id?: string
           payment_method: string
+          status?: string
           subtotal?: number
           total?: number
         }
@@ -126,9 +132,12 @@ export type Database = {
           amount_received?: number | null
           change_amount?: number
           created_at?: string
+          customer_name?: string
+          delivered_at?: string | null
           discount?: number
           id?: string
           payment_method?: string
+          status?: string
           subtotal?: number
           total?: number
         }
@@ -184,6 +193,7 @@ export type Database = {
       checkout_sale: {
         Args: {
           _amount_received?: number
+          _customer_name?: string
           _discount?: number
           _items: Json
           _payment_method: string
