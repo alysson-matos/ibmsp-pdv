@@ -109,31 +109,67 @@ function OperadoresPage() {
       <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
         {operators.map((op) => (
           <li key={op.id} className="flex items-center gap-3 px-4 py-3">
-            <span className="flex-1 font-medium">{op.name}</span>
-            <span
-              className={cn(
-                "rounded-md px-2 py-1 text-xs",
-                op.active ? "bg-accent/15 text-accent" : "bg-secondary text-muted-foreground",
-              )}
-            >
-              {op.active ? "Ativo" : "Inativo"}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => save.mutate({ id: op.id, name: op.name, active: !op.active })}
-            >
-              {op.active ? "Desativar" : "Ativar"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 text-muted-foreground hover:text-destructive"
-              aria-label={`Excluir ${op.name}`}
-              onClick={() => remove.mutate(op.id)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
+            {editingId === op.id ? (
+              <>
+                <Input
+                  autoFocus
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitEdit(op);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  className="flex-1"
+                  aria-label={`Editar nome de ${op.name}`}
+                />
+                <Button size="sm" disabled={save.isPending} onClick={() => commitEdit(op)}>
+                  Salvar
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
+                  Cancelar
+                </Button>
+              </>
+            ) : (
+              <>
+                <span className="flex-1 font-medium">{op.name}</span>
+                <span
+                  className={cn(
+                    "rounded-md px-2 py-1 text-xs",
+                    op.active ? "bg-accent/15 text-accent" : "bg-secondary text-muted-foreground",
+                  )}
+                >
+                  {op.active ? "Ativo" : "Inativo"}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-muted-foreground hover:text-foreground"
+                  aria-label={`Editar ${op.name}`}
+                  onClick={() => {
+                    setEditingId(op.id);
+                    setEditingName(op.name);
+                  }}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => save.mutate({ id: op.id, name: op.name, active: !op.active })}
+                >
+                  {op.active ? "Desativar" : "Ativar"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-muted-foreground hover:text-destructive"
+                  aria-label={`Excluir ${op.name}`}
+                  onClick={() => remove.mutate(op.id)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </>
+            )}
           </li>
         ))}
         {operators.length === 0 && (
