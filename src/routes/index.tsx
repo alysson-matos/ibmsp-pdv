@@ -75,6 +75,7 @@ function PdvPage() {
   const [discount, setDiscount] = useState("");
   const [payment, setPayment] = useState<PaymentMethod>("dinheiro");
   const [received, setReceived] = useState("");
+  const [customer, setCustomer] = useState("");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
 
@@ -151,6 +152,7 @@ function PdvPage() {
     mutationFn: (vars: {
       items: { product_id: string; quantity: number }[];
       payment_method: PaymentMethod;
+      customer_name: string;
       discount: number;
       amount_received: number | null;
     }) => checkoutFn({ data: vars }),
@@ -159,6 +161,7 @@ function PdvPage() {
       setCart([]);
       setDiscount("");
       setReceived("");
+      setCustomer("");
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       toast.success("Venda finalizada!");
@@ -171,6 +174,10 @@ function PdvPage() {
       toast.error("Adicione produtos ao carrinho");
       return;
     }
+    if (!customer.trim()) {
+      toast.error("Informe o nome do comprador");
+      return;
+    }
     if (payment === "dinheiro" && received && receivedValue < total) {
       toast.error("Valor recebido menor que o total");
       return;
@@ -178,6 +185,7 @@ function PdvPage() {
     mutation.mutate({
       items: cart.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
       payment_method: payment,
+      customer_name: customer.trim(),
       discount: discountValue,
       amount_received: payment === "dinheiro" && received ? receivedValue : null,
     });
@@ -359,6 +367,19 @@ function PdvPage() {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
+            Nome do comprador
+          </Label>
+          <Input
+            id="customer"
+            value={customer}
+            onChange={(e) => setCustomer(e.target.value)}
+            placeholder="Quem vai retirar os produtos"
+            className="h-11"
+          />
+        </div>
+
         {payment === "dinheiro" && (
           <div className="space-y-2 rounded-lg border border-border p-3">
             <Label htmlFor="received" className="text-xs uppercase tracking-widest text-muted-foreground">
@@ -405,6 +426,10 @@ function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
           Nova venda
         </Button>
       </div>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Comprador: <span className="font-semibold text-foreground">{sale.customer_name}</span> · retirada
+        na expedição
+      </p>
       <ul className="mt-3 space-y-1 text-sm">
         {sale.items.map((item) => (
           <li key={item.id} className="flex justify-between gap-4">
