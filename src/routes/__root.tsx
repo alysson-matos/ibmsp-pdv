@@ -172,7 +172,7 @@ function UnlockScreen() {
       <img
         src={logoAsset.url}
         alt="PDV - IBMemorial"
-        className="w-full max-w-md object-contain"
+        className="w-full max-w-[23.8rem] object-contain"
       />
       <form
         onSubmit={onSubmit}
