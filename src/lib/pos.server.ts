@@ -2,11 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
 /**
- * Server-side Supabase client using the publishable key.
- * The PDV tables are internal-use tables with public policies (no operator login yet).
+ * Server-side Supabase client for the PDV tables.
+ * These tables are closed to the browser (no anon/authenticated grants, RLS with no
+ * policies), so every read/write goes through server functions using the service role.
  */
 export function getServerSupabase() {
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+  const key = process.env["SUPABASE_SERVICE_ROLE_KEY"]!;
   const url = process.env["SUPABASE_URL"]!;
 
   return createClient<Database>(url, key, {
