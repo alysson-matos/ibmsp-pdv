@@ -168,15 +168,21 @@ function UnlockScreen() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-4">
+      <img
+        src={logoAsset.url}
+        alt="PDV - IBMemorial"
+        className="w-full max-w-md object-contain"
+      />
       <form
         onSubmit={onSubmit}
         className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg"
       >
         <div className="flex items-center gap-3 text-primary">
-          <img src={logoAsset.url} alt="PDV - IBMemorial" className="h-8 w-auto object-contain" />
           <Lock className="size-5" />
         </div>
+
+
 
         <h1 className="mt-4 text-lg font-semibold text-foreground">Acesso restrito</h1>
         <p className="mt-1 text-sm text-muted-foreground">
