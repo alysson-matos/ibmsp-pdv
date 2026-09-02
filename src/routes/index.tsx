@@ -30,6 +30,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
+
 
 const productsQuery = queryOptions({
   queryKey: ["products"],
@@ -46,19 +48,24 @@ const OPERATOR_STORAGE_KEY = "pdv:operator-id";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PDV do Guichê — Venda com leitor de código de barras" },
+      { title: "PDV - IBMemorial — Venda com leitor de código de barras" },
       {
         name: "description",
         content:
-          "Tela de venda do guichê: leia o código de barras, confira os produtos, o valor final e escolha a forma de pagamento.",
+          "PDV - IBMemorial: leia o código de barras, confira os produtos, o valor final e escolha a forma de pagamento.",
       },
-      { property: "og:title", content: "PDV do Guichê — Venda com leitor de código de barras" },
+      { property: "og:title", content: "PDV - IBMemorial — Venda com leitor de código de barras" },
       {
         property: "og:description",
         content: "Leitura de código de barras, carrinho, total e formas de pagamento em uma só tela.",
       },
+      { property: "og:url", content: "https://ibmsp-pdv.lovable.app/" },
+      { property: "og:image", content: `https://ibmsp-pdv.lovable.app${logoAsset.url}` },
+      { name: "twitter:image", content: `https://ibmsp-pdv.lovable.app${logoAsset.url}` },
     ],
+    links: [{ rel: "canonical", href: "https://ibmsp-pdv.lovable.app/" }],
   }),
+
   errorComponent: ({ error }) => (
     <div role="alert" className="p-8 text-destructive">
       {error.message}
@@ -225,7 +232,16 @@ function PdvPage() {
 
   return (
     <main className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-[1fr_400px]">
-      <h1 className="sr-only">Ponto de venda do guichê</h1>
+      <h1 className="sr-only">PDV - IBMemorial</h1>
+
+      <div className="flex justify-center rounded-xl border border-border bg-card p-6 shadow-lg lg:col-span-2">
+        <img
+          src={logoAsset.url}
+          alt="PDV - IBMemorial"
+          className="h-16 w-auto object-contain"
+        />
+      </div>
+
 
       <section className="flex flex-col gap-4">
         <form

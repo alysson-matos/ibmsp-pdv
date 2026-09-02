@@ -25,6 +25,8 @@ import { getRole, unlock, lock, type GateRole } from "../lib/gate.functions";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
+
 
 function NotFoundComponent() {
   return (
@@ -89,13 +91,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Guichê PDV — Vendas e Estoque" },
+      { title: "PDV - IBMemorial" },
       {
         name: "description",
         content:
-          "Ponto de venda de guichê com leitor de código de barras, controle de inventário e histórico de vendas.",
+          "PDV - IBMemorial: ponto de venda com leitor de código de barras, controle de inventário e histórico de vendas.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "PDV - IBMemorial" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -106,9 +109,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
   }),
+
   loader: () => getRole(),
   shellComponent: RootShell,
   component: RootComponent,
@@ -168,10 +172,11 @@ function UnlockScreen() {
         onSubmit={onSubmit}
         className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg"
       >
-        <div className="flex items-center gap-2 text-primary">
+        <div className="flex items-center gap-3 text-primary">
+          <img src={logoAsset.url} alt="PDV - IBMemorial" className="h-8 w-auto object-contain" />
           <Lock className="size-5" />
-          <span className="text-sm font-bold uppercase tracking-[0.2em]">Guichê</span>
         </div>
+
         <h1 className="mt-4 text-lg font-semibold text-foreground">Acesso restrito</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Digite a senha para entrar no sistema.
@@ -230,11 +235,10 @@ function RootComponent() {
         <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-6 px-4">
             <Link to="/" className="flex items-center gap-2">
-              <span className="grid size-7 place-items-center rounded bg-primary text-primary-foreground">
-                <ScanBarcode className="size-4" />
-              </span>
-              <span className="text-sm font-bold uppercase tracking-[0.2em]">Guichê</span>
+              <img src={logoAsset.url} alt="PDV - IBMemorial" className="h-7 w-auto object-contain" />
+              <span className="sr-only">PDV - IBMemorial</span>
             </Link>
+
             <nav className="flex items-center gap-1">
               {visibleNav.map(({ to, label, icon: Icon }) => (
                 <Link
