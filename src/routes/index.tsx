@@ -236,6 +236,63 @@ function PdvPage() {
     });
   }
 
+  function newSale() {
+    setCart([]);
+    setScan("");
+    setDiscount("");
+    setReceived("");
+    setCustomer("");
+    setPayment("credito");
+    setLastSale(null);
+    requestAnimationFrame(focusScanner);
+  }
+
+  const shortcutRef = useRef({ finalize, newSale });
+  shortcutRef.current = { finalize, newSale };
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      const key = e.key.toLowerCase();
+      const paymentByKey: Record<string, PaymentMethod> = {
+        "1": "credito",
+        "2": "debito",
+        "3": "pix",
+        "4": "dinheiro",
+      };
+      if (paymentByKey[key]) {
+        e.preventDefault();
+        setPayment(paymentByKey[key]);
+        return;
+      }
+      if (key === "b") {
+        e.preventDefault();
+        scanRef.current?.focus();
+        scanRef.current?.select();
+        return;
+      }
+      if (key === "c") {
+        e.preventDefault();
+        customerRef.current?.focus();
+        customerRef.current?.select();
+        return;
+      }
+      if (key === "f") {
+        e.preventDefault();
+        shortcutRef.current.finalize();
+        return;
+      }
+      if (key === "n") {
+        e.preventDefault();
+        shortcutRef.current.newSale();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+
+
   return (
     <main className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-[1fr_400px]">
       <h1 className="sr-only">PDV - IBMemorial</h1>
