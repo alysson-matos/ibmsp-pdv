@@ -569,8 +569,18 @@ function PdvPage() {
           }
           onClick={finalize}
         >
-          {mutation.isPending ? "Finalizando..." : "Finalizar venda"}
+          {mutation.isPending ? "Finalizando..." : "Finalizar venda (Alt+F)"}
         </Button>
+
+        <Button variant="outline" className="h-11" onClick={newSale}>
+          Nova venda (Alt+N)
+        </Button>
+
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          Atalhos: Alt+1 Crédito · Alt+2 Débito · Alt+3 Pix · Alt+4 Dinheiro · Alt+B leitor ·
+          Alt+C comprador · Alt+F finalizar · Alt+N nova venda
+        </p>
+
         </div>
       </aside>
     </main>
