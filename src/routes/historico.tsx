@@ -343,7 +343,8 @@ function StockTab() {
                 <td className="tabular px-4 py-3">{dateTime(m.created_at)}</td>
                 <td className="px-4 py-3">{m.product_name}</td>
                 <td className="tabular px-4 py-3 text-muted-foreground">{m.barcode || "—"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{m.reason}</td>
+                <td className="px-4 py-3">{m.customer_name || "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{m.operator_name || "—"}</td>
                 <td
                   className={cn(
                     "tabular px-4 py-3 text-right font-semibold",
