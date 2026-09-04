@@ -364,3 +364,59 @@ export const deleteOperator = createServerFn({ method: "POST" })
     if (error) throw new Error("Não foi possível excluir. Se o operador já tem vendas, desative-o.");
     return { ok: true };
   });
+
+export type StockMovement = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  barcode: string | null;
+  delta: number;
+  reason: string;
+  created_at: string;
+};
+
+export const listStockMovements = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        from: z.string().optional(),
+        to: z.string().optional(),
+        tz_offset: z.number().default(0),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data }): Promise<StockMovement[]> => {
+    const { getServerSupabase } = await import("./pos.server");
+    const supabase = await getServerSupabase();
+
+    let query = supabase
+      .from("stock_movements")
+      .select("id, product_id, delta, reason, created_at, products(name, barcode)")
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    const startOf = (day: string) =>
+      new Date(Date.parse(`${day}T00:00:00Z`) + data.tz_offset * 60000).toISOString();
+    const endOf = (day: string) =>
+      new Date(Date.parse(`${day}T23:59:59.999Z`) + data.tz_offset * 60000).toISOString();
+
+    if (data.from) query = query.gte("created_at", startOf(data.from));
+    if (data.to) query = query.lte("created_at", endOf(data.to));
+
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+
+    return (rows ?? []).map((row) => {
+      const r = row as unknown as Record<string, unknown>;
+      const product = (r["products"] ?? {}) as Record<string, unknown>;
+      return {
+        id: r["id"] as string,
+        product_id: r["product_id"] as string,
+        product_name: (product["name"] as string | null) ?? "Produto removido",
+        barcode: (product["barcode"] as string | null) ?? null,
+        delta: Number(r["delta"] ?? 0),
+        reason: (r["reason"] as string | null) ?? "",
+        created_at: r["created_at"] as string,
+      };
+    });
+  });
