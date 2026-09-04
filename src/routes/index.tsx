@@ -490,12 +490,13 @@ function PdvPage() {
             Forma de pagamento
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {PAYMENT_METHODS.map((method) => {
+            {PAYMENT_METHODS.map((method, idx) => {
               const Icon = paymentIcons[method];
               return (
                 <button
                   key={method}
                   type="button"
+                  title={`Atalho: Alt+${idx + 1}`}
                   onClick={() => setPayment(method)}
                   className={cn(
                     "flex items-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
@@ -506,6 +507,9 @@ function PdvPage() {
                 >
                   <Icon className="size-4" />
                   {PAYMENT_LABEL[method]}
+                  <kbd className="ml-auto rounded border border-border px-1 text-[10px] text-muted-foreground">
+                    Alt+{idx + 1}
+                  </kbd>
                 </button>
               );
             })}
@@ -515,10 +519,13 @@ function PdvPage() {
 
         <div className="space-y-2">
           <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Nome do comprador <span className="text-destructive">*</span>
+            Nome do comprador <span className="text-destructive">*</span>{" "}
+            <kbd className="rounded border border-border px-1 text-[10px] normal-case">Alt+C</kbd>
           </Label>
           <Input
             id="customer"
+            ref={customerRef}
+
             required
             aria-required="true"
             aria-invalid={!customer.trim()}
