@@ -418,7 +418,7 @@ function PdvPage() {
           )}
         </div>
 
-        {lastSale && <Receipt sale={lastSale} onNew={() => setLastSale(null)} />}
+        {lastSale && <Receipt sale={lastSale} onNew={newSale} />}
       </section>
 
       <aside className="flex h-fit flex-col gap-4 lg:sticky lg:top-[4.5rem]">
