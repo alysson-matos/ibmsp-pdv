@@ -332,7 +332,8 @@ function StockTab() {
               <th className="px-4 py-3">Data</th>
               <th className="px-4 py-3">Produto</th>
               <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3">Motivo</th>
+              <th className="px-4 py-3">Comprador</th>
+              <th className="px-4 py-3">Operador</th>
               <th className="px-4 py-3 text-right">Quantidade</th>
             </tr>
           </thead>
