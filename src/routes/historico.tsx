@@ -239,9 +239,99 @@ function HistoricoPage() {
           </tbody>
         </table>
       </div>
-    </main>
+    </>
   );
 }
+
+function StockTab() {
+  const today = todayISO();
+  const [range, setRange] = useState({
+    from: today,
+    to: today,
+    tz_offset: new Date().getTimezoneOffset(),
+  });
+  const { data: movements } = useSuspenseQuery(movementsQuery(range));
+
+  const entradas = movements.filter((m) => m.delta > 0).reduce((s, m) => s + m.delta, 0);
+  const saidas = movements.filter((m) => m.delta < 0).reduce((s, m) => s + Math.abs(m.delta), 0);
+
+  return (
+    <>
+      <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
+        <div className="grid gap-1.5">
+          <Label htmlFor="mfrom" className="text-xs uppercase tracking-widest text-muted-foreground">
+            De
+          </Label>
+          <Input
+            id="mfrom"
+            type="date"
+            value={range.from}
+            onChange={(e) => setRange({ ...range, from: e.target.value })}
+            className="tabular w-40"
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="mto" className="text-xs uppercase tracking-widest text-muted-foreground">
+            Até
+          </Label>
+          <Input
+            id="mto"
+            type="date"
+            value={range.to}
+            onChange={(e) => setRange({ ...range, to: e.target.value })}
+            className="tabular w-40"
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <SummaryCard label="Movimentações" value={String(movements.length)} highlight />
+        <SummaryCard label="Entradas" value={`+${entradas}`} />
+        <SummaryCard label="Saídas" value={`-${saidas}`} />
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+        <table className="w-full text-sm">
+          <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+            <tr>
+              <th className="px-4 py-3">Data</th>
+              <th className="px-4 py-3">Produto</th>
+              <th className="px-4 py-3">Código</th>
+              <th className="px-4 py-3">Motivo</th>
+              <th className="px-4 py-3 text-right">Quantidade</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {movements.map((m) => (
+              <tr key={m.id} className="hover:bg-secondary/30">
+                <td className="tabular px-4 py-3">{dateTime(m.created_at)}</td>
+                <td className="px-4 py-3">{m.product_name}</td>
+                <td className="tabular px-4 py-3 text-muted-foreground">{m.barcode || "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{m.reason}</td>
+                <td
+                  className={cn(
+                    "tabular px-4 py-3 text-right font-semibold",
+                    m.delta > 0 ? "text-primary" : "text-destructive",
+                  )}
+                >
+                  {m.delta > 0 ? `+${m.delta}` : m.delta}
+                </td>
+              </tr>
+            ))}
+            {movements.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  Nenhuma movimentação no período selecionado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 
 function SummaryCard({
   label,
