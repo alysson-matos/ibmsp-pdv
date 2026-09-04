@@ -393,7 +393,9 @@ export const listStockMovements = createServerFn({ method: "GET" })
 
     let query = supabase
       .from("stock_movements")
-      .select("id, product_id, delta, reason, created_at, products(name, barcode)")
+      .select(
+        "id, product_id, delta, reason, created_at, products(name, barcode), sales(customer_name, operator_name)",
+      )
       .order("created_at", { ascending: false })
       .limit(500);
 
