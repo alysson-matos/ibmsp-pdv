@@ -288,7 +288,7 @@ function StockTab() {
   });
   const { data: movements } = useSuspenseQuery(movementsQuery(range));
 
-  const entradas = movements.filter((m) => m.delta > 0).reduce((s, m) => s + m.delta, 0);
+  
   const saidas = movements.filter((m) => m.delta < 0).reduce((s, m) => s + Math.abs(m.delta), 0);
 
   return (
