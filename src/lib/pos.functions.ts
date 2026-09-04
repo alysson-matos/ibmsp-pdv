@@ -372,6 +372,7 @@ export type StockMovement = {
   barcode: string | null;
   delta: number;
   reason: string;
+  current_stock: number | null;
   customer_name: string | null;
   operator_name: string | null;
   created_at: string;
@@ -394,7 +395,7 @@ export const listStockMovements = createServerFn({ method: "GET" })
     let query = supabase
       .from("stock_movements")
       .select(
-        "id, product_id, delta, reason, created_at, products(name, barcode), sales(customer_name, operator_name)",
+        "id, product_id, delta, reason, created_at, products(name, barcode, stock), sales(customer_name, operator_name)",
       )
       .order("created_at", { ascending: false })
       .limit(500);
@@ -415,6 +416,8 @@ export const listStockMovements = createServerFn({ method: "GET" })
       const product = (r["products"] ?? {}) as Record<string, unknown>;
       const sale = (r["sales"] ?? {}) as Record<string, unknown>;
       return {
+        current_stock:
+          product["stock"] == null ? null : Number(product["stock"]),
         customer_name: (sale["customer_name"] as string | null) || null,
         operator_name: (sale["operator_name"] as string | null) || null,
         id: r["id"] as string,
