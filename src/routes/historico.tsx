@@ -66,6 +66,44 @@ export const Route = createFileRoute("/historico")({
 });
 
 function HistoricoPage() {
+  const [tab, setTab] = useState<"vendas" | "estoque">("vendas");
+
+  const tabs = [
+    { id: "vendas", label: "Histórico de vendas", icon: ReceiptText },
+    { id: "estoque", label: "Controle de estoque", icon: Boxes },
+  ] as const;
+
+  return (
+    <main className="mx-auto max-w-[1600px] p-4">
+      <h1 className="flex items-center gap-2 text-2xl font-bold">
+        <ReceiptText className="size-6 text-primary" /> Histórico
+      </h1>
+
+      <div className="mt-4 flex flex-wrap gap-1.5">
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={cn(
+              "flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
+              tab === id
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="size-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "vendas" ? <SalesTab /> : <StockTab />}
+    </main>
+  );
+}
+
+function SalesTab() {
   const today = todayISO();
   const [filters, setFilters] = useState<Filters>({
     from: today,
@@ -85,10 +123,8 @@ function HistoricoPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-[1600px] p-4">
-      <h1 className="flex items-center gap-2 text-2xl font-bold">
-        <ReceiptText className="size-6 text-primary" /> Histórico de vendas
-      </h1>
+    <>
+
 
       <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
         <div className="grid gap-1.5">
