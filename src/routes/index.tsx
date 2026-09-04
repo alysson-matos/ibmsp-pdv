@@ -99,11 +99,13 @@ function PdvPage() {
   const [operatorId, setOperatorId] = useState("");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
+  const customerRef = useRef<HTMLInputElement>(null);
 
   const focusScanner = () => scanRef.current?.focus();
   useEffect(() => {
     focusScanner();
   }, [lastSale]);
+
 
   const activeOperators = useMemo(() => operators.filter((o) => o.active), [operators]);
 
