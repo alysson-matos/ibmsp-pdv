@@ -1,9 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
-import { ReceiptText, ChevronDown } from "lucide-react";
+import { ReceiptText, ChevronDown, Boxes } from "lucide-react";
 
-import { listOperators, listSales, PAYMENT_METHODS, type PaymentMethod } from "@/lib/pos.functions";
+import {
+  listOperators,
+  listSales,
+  listStockMovements,
+  PAYMENT_METHODS,
+  type PaymentMethod,
+} from "@/lib/pos.functions";
 import { brl, dateTime, PAYMENT_LABEL, todayISO } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +33,13 @@ const salesQuery = (filters: Filters) =>
     queryKey: ["sales", filters],
     queryFn: () => listSales({ data: filters }),
   });
+
+const movementsQuery = (range: { from: string; to: string; tz_offset: number }) =>
+  queryOptions({
+    queryKey: ["stock-movements", range],
+    queryFn: () => listStockMovements({ data: range }),
+  });
+
 
 export const Route = createFileRoute("/historico")({
   head: () => ({
