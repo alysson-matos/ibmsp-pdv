@@ -99,11 +99,13 @@ function PdvPage() {
   const [operatorId, setOperatorId] = useState("");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
+  const customerRef = useRef<HTMLInputElement>(null);
 
   const focusScanner = () => scanRef.current?.focus();
   useEffect(() => {
     focusScanner();
   }, [lastSale]);
+
 
   const activeOperators = useMemo(() => operators.filter((o) => o.active), [operators]);
 
@@ -234,6 +236,63 @@ function PdvPage() {
     });
   }
 
+  function newSale() {
+    setCart([]);
+    setScan("");
+    setDiscount("");
+    setReceived("");
+    setCustomer("");
+    setPayment("credito");
+    setLastSale(null);
+    requestAnimationFrame(focusScanner);
+  }
+
+  const shortcutRef = useRef({ finalize, newSale });
+  shortcutRef.current = { finalize, newSale };
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      const key = e.key.toLowerCase();
+      const paymentByKey: Record<string, PaymentMethod> = {
+        "1": "credito",
+        "2": "debito",
+        "3": "pix",
+        "4": "dinheiro",
+      };
+      if (paymentByKey[key]) {
+        e.preventDefault();
+        setPayment(paymentByKey[key]);
+        return;
+      }
+      if (key === "b") {
+        e.preventDefault();
+        scanRef.current?.focus();
+        scanRef.current?.select();
+        return;
+      }
+      if (key === "c") {
+        e.preventDefault();
+        customerRef.current?.focus();
+        customerRef.current?.select();
+        return;
+      }
+      if (key === "f") {
+        e.preventDefault();
+        shortcutRef.current.finalize();
+        return;
+      }
+      if (key === "n") {
+        e.preventDefault();
+        shortcutRef.current.newSale();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+
+
   return (
     <main className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-[1fr_400px]">
       <h1 className="sr-only">PDV - IBMemorial</h1>
@@ -359,7 +418,7 @@ function PdvPage() {
           )}
         </div>
 
-        {lastSale && <Receipt sale={lastSale} onNew={() => setLastSale(null)} />}
+        {lastSale && <Receipt sale={lastSale} onNew={newSale} />}
       </section>
 
       <aside className="flex h-fit flex-col gap-4 lg:sticky lg:top-[4.5rem]">
@@ -431,12 +490,13 @@ function PdvPage() {
             Forma de pagamento
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {PAYMENT_METHODS.map((method) => {
+            {PAYMENT_METHODS.map((method, idx) => {
               const Icon = paymentIcons[method];
               return (
                 <button
                   key={method}
                   type="button"
+                  title={`Atalho: Alt+${idx + 1}`}
                   onClick={() => setPayment(method)}
                   className={cn(
                     "flex items-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
@@ -447,6 +507,9 @@ function PdvPage() {
                 >
                   <Icon className="size-4" />
                   {PAYMENT_LABEL[method]}
+                  <kbd className="ml-auto rounded border border-border px-1 text-[10px] text-muted-foreground">
+                    Alt+{idx + 1}
+                  </kbd>
                 </button>
               );
             })}
@@ -456,10 +519,13 @@ function PdvPage() {
 
         <div className="space-y-2">
           <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Nome do comprador <span className="text-destructive">*</span>
+            Nome do comprador <span className="text-destructive">*</span>{" "}
+            <kbd className="rounded border border-border px-1 text-[10px] normal-case">Alt+C</kbd>
           </Label>
           <Input
             id="customer"
+            ref={customerRef}
+
             required
             aria-required="true"
             aria-invalid={!customer.trim()}
@@ -503,8 +569,18 @@ function PdvPage() {
           }
           onClick={finalize}
         >
-          {mutation.isPending ? "Finalizando..." : "Finalizar venda"}
+          {mutation.isPending ? "Finalizando..." : "Finalizar venda (Alt+F)"}
         </Button>
+
+        <Button variant="outline" className="h-11" onClick={newSale}>
+          Nova venda (Alt+N)
+        </Button>
+
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          Atalhos: Alt+1 Crédito · Alt+2 Débito · Alt+3 Pix · Alt+4 Dinheiro · Alt+B leitor ·
+          Alt+C comprador · Alt+F finalizar · Alt+N nova venda
+        </p>
+
         </div>
       </aside>
     </main>
