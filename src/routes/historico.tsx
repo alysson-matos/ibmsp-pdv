@@ -318,13 +318,12 @@ function StockTab() {
             className="tabular w-40"
           />
         </div>
+        <div className="ml-auto flex flex-wrap gap-3">
+          <SummaryCard label="Movimentações" value={String(movements.length)} highlight />
+          <SummaryCard label="Saídas" value={`-${saidas}`} />
+        </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <SummaryCard label="Movimentações" value={String(movements.length)} highlight />
-        <SummaryCard label="Entradas" value={`+${entradas}`} />
-        <SummaryCard label="Saídas" value={`-${saidas}`} />
-      </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
         <table className="w-full text-sm">
