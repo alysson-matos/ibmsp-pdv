@@ -288,7 +288,7 @@ function StockTab() {
   });
   const { data: movements } = useSuspenseQuery(movementsQuery(range));
 
-  const entradas = movements.filter((m) => m.delta > 0).reduce((s, m) => s + m.delta, 0);
+  
   const saidas = movements.filter((m) => m.delta < 0).reduce((s, m) => s + Math.abs(m.delta), 0);
 
   return (
@@ -318,13 +318,12 @@ function StockTab() {
             className="tabular w-40"
           />
         </div>
+        <div className="ml-auto flex flex-wrap gap-3">
+          <SummaryCard label="Movimentações" value={String(movements.length)} highlight />
+          <SummaryCard label="Saídas" value={`-${saidas}`} />
+        </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <SummaryCard label="Movimentações" value={String(movements.length)} highlight />
-        <SummaryCard label="Entradas" value={`+${entradas}`} />
-        <SummaryCard label="Saídas" value={`-${saidas}`} />
-      </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
         <table className="w-full text-sm">
@@ -333,7 +332,8 @@ function StockTab() {
               <th className="px-4 py-3">Data</th>
               <th className="px-4 py-3">Produto</th>
               <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3">Motivo</th>
+              <th className="px-4 py-3">Comprador</th>
+              <th className="px-4 py-3">Operador</th>
               <th className="px-4 py-3 text-right">Quantidade</th>
             </tr>
           </thead>
@@ -343,7 +343,8 @@ function StockTab() {
                 <td className="tabular px-4 py-3">{dateTime(m.created_at)}</td>
                 <td className="px-4 py-3">{m.product_name}</td>
                 <td className="tabular px-4 py-3 text-muted-foreground">{m.barcode || "—"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{m.reason}</td>
+                <td className="px-4 py-3">{m.customer_name || "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{m.operator_name || "—"}</td>
                 <td
                   className={cn(
                     "tabular px-4 py-3 text-right font-semibold",
@@ -356,7 +357,7 @@ function StockTab() {
             ))}
             {movements.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                   Nenhuma movimentação no período selecionado.
                 </td>
               </tr>
