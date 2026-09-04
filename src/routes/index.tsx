@@ -138,6 +138,10 @@ function PdvPage() {
     setCart((prev) => {
       const existing = prev.find((l) => l.product.id === product.id);
       const currentQty = existing?.quantity ?? 0;
+      if (product.stock <= 0) {
+        toast.error(`${product.name} está sem estoque e não pode ser vendido`);
+        return prev;
+      }
       if (currentQty + 1 > product.stock) {
         toast.error(`Estoque insuficiente: restam ${product.stock} un. de ${product.name}`);
         return prev;
