@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
-import { ReceiptText, ChevronDown, Boxes } from "lucide-react";
+import { ReceiptText, ChevronDown, Boxes, PackageSearch } from "lucide-react";
 
 import {
   listOperators,
+  listProducts,
   listSales,
   listStockMovements,
   PAYMENT_METHODS,
@@ -22,6 +23,11 @@ type Filters = {
   operator_id: string;
   tz_offset: number;
 };
+
+const productsQuery = queryOptions({
+  queryKey: ["products"],
+  queryFn: () => listProducts(),
+});
 
 const operatorsQuery = queryOptions({
   queryKey: ["operators"],
@@ -66,11 +72,12 @@ export const Route = createFileRoute("/historico")({
 });
 
 function HistoricoPage() {
-  const [tab, setTab] = useState<"vendas" | "estoque">("vendas");
+  const [tab, setTab] = useState<"vendas" | "estoque" | "relatorio">("vendas");
 
   const tabs = [
     { id: "vendas", label: "Histórico de vendas", icon: ReceiptText },
     { id: "estoque", label: "Controle de estoque", icon: Boxes },
+    { id: "relatorio", label: "Relatório do estoque", icon: PackageSearch },
   ] as const;
 
   return (
@@ -98,7 +105,9 @@ function HistoricoPage() {
         ))}
       </div>
 
-      {tab === "vendas" ? <SalesTab /> : <StockTab />}
+      {tab === "vendas" && <SalesTab />}
+      {tab === "estoque" && <StockTab />}
+      {tab === "relatorio" && <StockReportTab />}
     </main>
   );
 }
@@ -335,6 +344,7 @@ function StockTab() {
               <th className="px-4 py-3">Comprador</th>
               <th className="px-4 py-3">Operador</th>
               <th className="px-4 py-3 text-right">Quantidade</th>
+              <th className="px-4 py-3 text-right">Estoque atual</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -353,11 +363,14 @@ function StockTab() {
                 >
                   {m.delta > 0 ? `+${m.delta}` : m.delta}
                 </td>
+                <td className="tabular px-4 py-3 text-right">
+                  {m.current_stock ?? "—"}
+                </td>
               </tr>
             ))}
             {movements.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                   Nenhuma movimentação no período selecionado.
                 </td>
               </tr>
@@ -369,6 +382,78 @@ function StockTab() {
   );
 }
 
+
+function StockReportTab() {
+  const { data: products } = useSuspenseQuery(productsQuery);
+  const active = products.filter((p) => p.active);
+
+  const totalUnits = active.reduce((s, p) => s + p.stock, 0);
+  const totalValue = active.reduce((s, p) => s + p.stock * p.price, 0);
+  const lowStock = active.filter((p) => p.stock <= p.min_stock).length;
+
+  return (
+    <>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <SummaryCard label="Produtos ativos" value={String(active.length)} highlight />
+        <SummaryCard label="Total em estoque" value={`${totalUnits} un.`} highlight />
+        <SummaryCard label="Valor do estoque" value={brl(totalValue)} />
+        <SummaryCard label="Estoque baixo" value={String(lowStock)} />
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+        <table className="w-full text-sm">
+          <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+            <tr>
+              <th className="px-4 py-3">Produto</th>
+              <th className="px-4 py-3">Código</th>
+              <th className="px-4 py-3 text-right">Preço</th>
+              <th className="px-4 py-3 text-right">Estoque</th>
+              <th className="px-4 py-3 text-right">Valor total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {active.map((p) => (
+              <tr key={p.id} className="hover:bg-secondary/30">
+                <td className="px-4 py-3">{p.name}</td>
+                <td className="tabular px-4 py-3 text-muted-foreground">{p.barcode}</td>
+                <td className="tabular px-4 py-3 text-right">{brl(p.price)}</td>
+                <td
+                  className={cn(
+                    "tabular px-4 py-3 text-right font-semibold",
+                    p.stock === 0
+                      ? "text-destructive"
+                      : p.stock <= p.min_stock
+                        ? "text-amber-500"
+                        : "",
+                  )}
+                >
+                  {p.stock}
+                </td>
+                <td className="tabular px-4 py-3 text-right">{brl(p.stock * p.price)}</td>
+              </tr>
+            ))}
+            {active.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  Nenhum produto ativo.
+                </td>
+              </tr>
+            )}
+          </tbody>
+          <tfoot className="border-t border-border">
+            <tr className="bg-secondary/30 font-semibold">
+              <td className="px-4 py-3" colSpan={3}>
+                Total
+              </td>
+              <td className="tabular px-4 py-3 text-right">{totalUnits}</td>
+              <td className="tabular px-4 py-3 text-right">{brl(totalValue)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </>
+  );
+}
 
 function SummaryCard({
   label,
