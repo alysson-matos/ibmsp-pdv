@@ -372,6 +372,8 @@ export type StockMovement = {
   barcode: string | null;
   delta: number;
   reason: string;
+  customer_name: string | null;
+  operator_name: string | null;
   created_at: string;
 };
 
