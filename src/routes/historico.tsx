@@ -1,9 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
-import { ReceiptText, ChevronDown } from "lucide-react";
+import { ReceiptText, ChevronDown, Boxes } from "lucide-react";
 
-import { listOperators, listSales, PAYMENT_METHODS, type PaymentMethod } from "@/lib/pos.functions";
+import {
+  listOperators,
+  listSales,
+  listStockMovements,
+  PAYMENT_METHODS,
+  type PaymentMethod,
+} from "@/lib/pos.functions";
 import { brl, dateTime, PAYMENT_LABEL, todayISO } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +33,13 @@ const salesQuery = (filters: Filters) =>
     queryKey: ["sales", filters],
     queryFn: () => listSales({ data: filters }),
   });
+
+const movementsQuery = (range: { from: string; to: string; tz_offset: number }) =>
+  queryOptions({
+    queryKey: ["stock-movements", range],
+    queryFn: () => listStockMovements({ data: range }),
+  });
+
 
 export const Route = createFileRoute("/historico")({
   head: () => ({
@@ -53,6 +66,44 @@ export const Route = createFileRoute("/historico")({
 });
 
 function HistoricoPage() {
+  const [tab, setTab] = useState<"vendas" | "estoque">("vendas");
+
+  const tabs = [
+    { id: "vendas", label: "Histórico de vendas", icon: ReceiptText },
+    { id: "estoque", label: "Controle de estoque", icon: Boxes },
+  ] as const;
+
+  return (
+    <main className="mx-auto max-w-[1600px] p-4">
+      <h1 className="flex items-center gap-2 text-2xl font-bold">
+        <ReceiptText className="size-6 text-primary" /> Histórico
+      </h1>
+
+      <div className="mt-4 flex flex-wrap gap-1.5">
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={cn(
+              "flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
+              tab === id
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="size-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "vendas" ? <SalesTab /> : <StockTab />}
+    </main>
+  );
+}
+
+function SalesTab() {
   const today = todayISO();
   const [filters, setFilters] = useState<Filters>({
     from: today,
@@ -72,10 +123,8 @@ function HistoricoPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-[1600px] p-4">
-      <h1 className="flex items-center gap-2 text-2xl font-bold">
-        <ReceiptText className="size-6 text-primary" /> Histórico de vendas
-      </h1>
+    <>
+
 
       <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
         <div className="grid gap-1.5">
@@ -226,9 +275,99 @@ function HistoricoPage() {
           </tbody>
         </table>
       </div>
-    </main>
+    </>
   );
 }
+
+function StockTab() {
+  const today = todayISO();
+  const [range, setRange] = useState({
+    from: today,
+    to: today,
+    tz_offset: new Date().getTimezoneOffset(),
+  });
+  const { data: movements } = useSuspenseQuery(movementsQuery(range));
+
+  const entradas = movements.filter((m) => m.delta > 0).reduce((s, m) => s + m.delta, 0);
+  const saidas = movements.filter((m) => m.delta < 0).reduce((s, m) => s + Math.abs(m.delta), 0);
+
+  return (
+    <>
+      <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
+        <div className="grid gap-1.5">
+          <Label htmlFor="mfrom" className="text-xs uppercase tracking-widest text-muted-foreground">
+            De
+          </Label>
+          <Input
+            id="mfrom"
+            type="date"
+            value={range.from}
+            onChange={(e) => setRange({ ...range, from: e.target.value })}
+            className="tabular w-40"
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="mto" className="text-xs uppercase tracking-widest text-muted-foreground">
+            Até
+          </Label>
+          <Input
+            id="mto"
+            type="date"
+            value={range.to}
+            onChange={(e) => setRange({ ...range, to: e.target.value })}
+            className="tabular w-40"
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <SummaryCard label="Movimentações" value={String(movements.length)} highlight />
+        <SummaryCard label="Entradas" value={`+${entradas}`} />
+        <SummaryCard label="Saídas" value={`-${saidas}`} />
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+        <table className="w-full text-sm">
+          <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+            <tr>
+              <th className="px-4 py-3">Data</th>
+              <th className="px-4 py-3">Produto</th>
+              <th className="px-4 py-3">Código</th>
+              <th className="px-4 py-3">Motivo</th>
+              <th className="px-4 py-3 text-right">Quantidade</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {movements.map((m) => (
+              <tr key={m.id} className="hover:bg-secondary/30">
+                <td className="tabular px-4 py-3">{dateTime(m.created_at)}</td>
+                <td className="px-4 py-3">{m.product_name}</td>
+                <td className="tabular px-4 py-3 text-muted-foreground">{m.barcode || "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{m.reason}</td>
+                <td
+                  className={cn(
+                    "tabular px-4 py-3 text-right font-semibold",
+                    m.delta > 0 ? "text-primary" : "text-destructive",
+                  )}
+                >
+                  {m.delta > 0 ? `+${m.delta}` : m.delta}
+                </td>
+              </tr>
+            ))}
+            {movements.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  Nenhuma movimentação no período selecionado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 
 function SummaryCard({
   label,
