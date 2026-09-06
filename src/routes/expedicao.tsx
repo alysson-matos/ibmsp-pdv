@@ -179,7 +179,7 @@ function ShippingCard({
             {sale.customer_name || t("Sem nome")}
           </p>
           <p className="tabular text-xs text-muted-foreground">
-            {dateTime(sale.created_at)} · {PAYMENT_LABEL[sale.payment_method]} · {brl(sale.total)}
+            {dateTime(sale.created_at)} · {t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)} · {brl(sale.total)}
           </p>
         </div>
         <span

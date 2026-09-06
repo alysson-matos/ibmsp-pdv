@@ -523,7 +523,7 @@ function PdvPage() {
                   )}
                 >
                   <Icon className="size-4" />
-                  {PAYMENT_LABEL[method]}
+                  {t(PAYMENT_LABEL[method] ?? method)}
                   <kbd className="ml-auto rounded border border-border px-1 text-[10px] text-muted-foreground">
                     {t("Alt+{n}", { n: idx + 1 })}
                   </kbd>
@@ -640,7 +640,7 @@ function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
           </div>
         )}
         <div className="flex justify-between font-semibold">
-          <span>{t("Total")} · {PAYMENT_LABEL[sale.payment_method]}</span>
+          <span>{t("Total")} · {t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)}</span>
           <span className="tabular">{brl(sale.total)}</span>
         </div>
         {sale.payment_method === "dinheiro" && sale.amount_received != null && (
