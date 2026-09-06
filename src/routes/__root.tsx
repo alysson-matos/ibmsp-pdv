@@ -253,13 +253,23 @@ function AccessDenied() {
 }
 
 function RootComponent() {
+  return (
+    <LanguageProvider>
+      <RootShellContent />
+    </LanguageProvider>
+  );
+}
+
+function RootShellContent() {
   const { queryClient } = Route.useRouteContext();
   const role = Route.useLoaderData() as GateRole | null;
   const router = useRouter();
+  const t = useT();
   const lockFn = useServerFn(lock);
   const [signingOut, setSigningOut] = useState(false);
 
   if (!role || signingOut) return <UnlockScreen />;
+
 
   const isAdmin = role === "admin";
   const visibleNav = navItems.filter((item) => isAdmin || !item.adminOnly);

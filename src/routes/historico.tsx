@@ -449,6 +449,7 @@ function StockTab() {
 
 
 function StockReportTab() {
+  const t = useT();
   const { data: products } = useSuspenseQuery(productsQuery);
   const active = products.filter((p) => p.active);
 
@@ -468,10 +469,10 @@ function StockReportTab() {
   return (
     <>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard label="Produtos ativos" value={String(active.length)} highlight />
-        <SummaryCard label="Total em estoque" value={`${totalUnits} un.`} highlight />
-        <SummaryCard label="Valor do estoque" value={brl(totalValue)} />
-        <SummaryCard label="Estoque baixo" value={String(lowStock)} />
+        <SummaryCard label={t("Produtos ativos")} value={String(active.length)} highlight />
+        <SummaryCard label={t("Total em estoque")} value={t("{n} un.", { n: totalUnits })} highlight />
+        <SummaryCard label={t("Valor do estoque")} value={brl(totalValue)} />
+        <SummaryCard label={t("Estoque baixo")} value={String(lowStock)} />
       </div>
 
       <div className="mt-4 flex justify-end">
@@ -479,13 +480,13 @@ function StockReportTab() {
           onClick={() =>
             exportToExcel(
               "relatorio-estoque",
-              "Relatório do estoque",
+              t("Relatório do estoque"),
               rows.map((p) => ({
-                Produto: p.name,
-                Código: p.barcode,
-                Preço: p.price,
-                Estoque: p.stock,
-                "Valor total": p.stock * p.price,
+                [t("Produto")]: p.name,
+                [t("Código")]: p.barcode,
+                [t("Preço")]: p.price,
+                [t("Estoque")]: p.stock,
+                [t("Valor total")]: p.stock * p.price,
               })),
             )
           }
@@ -496,11 +497,11 @@ function StockReportTab() {
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
-              <SortableTh label="Produto" sortKey="name" sort={sort} onToggle={toggle} />
-              <SortableTh label="Código" sortKey="barcode" sort={sort} onToggle={toggle} />
-              <SortableTh label="Preço" sortKey="price" sort={sort} onToggle={toggle} align="right" />
-              <SortableTh label="Estoque" sortKey="stock" sort={sort} onToggle={toggle} align="right" />
-              <SortableTh label="Valor total" sortKey="value" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label={t("Produto")} sortKey="name" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Código")} sortKey="barcode" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Preço")} sortKey="price" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label={t("Estoque")} sortKey="stock" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label={t("Valor total")} sortKey="value" sort={sort} onToggle={toggle} align="right" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -527,7 +528,7 @@ function StockReportTab() {
             {active.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
-                  Nenhum produto ativo.
+                  {t("Nenhum produto ativo.")}
                 </td>
               </tr>
             )}
@@ -535,7 +536,7 @@ function StockReportTab() {
           <tfoot className="border-t border-border">
             <tr className="bg-secondary/30 font-semibold">
               <td className="px-4 py-3" colSpan={3}>
-                Total
+                {t("Total")}
               </td>
               <td className="tabular px-4 py-3 text-right">{totalUnits}</td>
               <td className="tabular px-4 py-3 text-right">{brl(totalValue)}</td>
@@ -570,9 +571,10 @@ function SummaryCard({
 }
 
 function ExportButton({ onClick }: { onClick: () => void }) {
+  const t = useT();
   return (
     <Button variant="outline" onClick={onClick}>
-      <FileSpreadsheet className="size-4" /> Exportar Excel
+      <FileSpreadsheet className="size-4" /> {t("Exportar Excel")}
     </Button>
   );
 }

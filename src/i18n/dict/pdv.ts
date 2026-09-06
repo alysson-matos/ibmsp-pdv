@@ -43,8 +43,6 @@ export const PDV: Record<string, string> = {
     "Shortcuts: Alt+1 Credit · Alt+2 Debit · Alt+3 Pix · Alt+4 Cash · Alt+B scanner · Alt+C customer · Alt+F finish · Alt+N new sale",
   "Venda registrada": "Sale registered",
   "Nova venda": "New sale",
-  Comprador: "Customer",
-  Operador: "Operator",
   "retirada na expedição": "pickup at shipping",
   "Recebido {value} · Troco": "Received {value} · Change",
 };
