@@ -327,7 +327,7 @@ function RootShellContent() {
                 className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
                 <LogOut className="size-3.5" />
-                Sair
+                {t("Sair")}
               </button>
             </div>
           </div>
