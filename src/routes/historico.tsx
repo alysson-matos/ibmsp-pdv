@@ -131,6 +131,16 @@ function SalesTab() {
     total: sales.filter((s) => s.payment_method === m).reduce((sum, s) => sum + s.total, 0),
   }));
 
+  const { sort, toggle, sorted } = useSort<(typeof sales)[number]>("date", "desc");
+  const rows = sorted(sales, {
+    date: (s) => s.created_at,
+    customer: (s) => s.customer_name,
+    operator: (s) => s.operator_name,
+    items: (s) => s.items.reduce((sum, i) => sum + i.quantity, 0),
+    payment: (s) => PAYMENT_LABEL[s.payment_method] ?? s.payment_method,
+    total: (s) => s.total,
+  });
+
   return (
     <>
 
@@ -197,6 +207,27 @@ function SalesTab() {
         </div>
       </div>
 
+      <div className="mt-4 flex justify-end">
+        <ExportButton
+          onClick={() =>
+            exportToExcel(
+              "historico-vendas",
+              "Vendas",
+              rows.map((s) => ({
+                Data: dateTime(s.created_at),
+                Comprador: s.customer_name || "",
+                Operador: s.operator_name || "",
+                Itens: s.items.reduce((sum, i) => sum + i.quantity, 0),
+                Produtos: s.items.map((i) => `${i.quantity}× ${i.product_name}`).join(", "),
+                Pagamento: PAYMENT_LABEL[s.payment_method] ?? s.payment_method,
+                Desconto: s.discount,
+                Total: s.total,
+              })),
+            )
+          }
+        />
+      </div>
+
       <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <SummaryCard label="Vendas" value={String(sales.length)} highlight />
         <SummaryCard label="Faturamento" value={brl(revenue)} highlight />
@@ -209,17 +240,17 @@ function SalesTab() {
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
-              <th className="px-4 py-3">Data</th>
-              <th className="px-4 py-3">Comprador</th>
-              <th className="px-4 py-3">Operador</th>
-              <th className="px-4 py-3">Itens</th>
-              <th className="px-4 py-3">Pagamento</th>
-              <th className="px-4 py-3 text-right">Total</th>
+              <SortableTh label="Data" sortKey="date" sort={sort} onToggle={toggle} />
+              <SortableTh label="Comprador" sortKey="customer" sort={sort} onToggle={toggle} />
+              <SortableTh label="Operador" sortKey="operator" sort={sort} onToggle={toggle} />
+              <SortableTh label="Itens" sortKey="items" sort={sort} onToggle={toggle} />
+              <SortableTh label="Pagamento" sortKey="payment" sort={sort} onToggle={toggle} />
+              <SortableTh label="Total" sortKey="total" sort={sort} onToggle={toggle} align="right" />
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {sales.map((sale) => (
+            {rows.map((sale) => (
               <Fragment key={sale.id}>
                 <tr
                   onClick={() => setOpenId(openId === sale.id ? null : sale.id)}
@@ -300,6 +331,17 @@ function StockTab() {
   
   const saidas = movements.filter((m) => m.delta < 0).reduce((s, m) => s + Math.abs(m.delta), 0);
 
+  const { sort, toggle, sorted } = useSort<(typeof movements)[number]>("date", "desc");
+  const rows = sorted(movements, {
+    date: (m) => m.created_at,
+    product: (m) => m.product_name,
+    barcode: (m) => m.barcode,
+    customer: (m) => m.customer_name,
+    operator: (m) => m.operator_name,
+    delta: (m) => m.delta,
+    current: (m) => m.current_stock,
+  });
+
   return (
     <>
       <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
@@ -327,9 +369,26 @@ function StockTab() {
             className="tabular w-40"
           />
         </div>
-        <div className="ml-auto flex flex-wrap gap-3">
+        <div className="ml-auto flex flex-wrap items-center gap-3">
           <SummaryCard label="Movimentações" value={String(movements.length)} highlight />
           <SummaryCard label="Saídas" value={`-${saidas}`} />
+          <ExportButton
+            onClick={() =>
+              exportToExcel(
+                "controle-estoque",
+                "Controle de estoque",
+                rows.map((m) => ({
+                  Data: dateTime(m.created_at),
+                  Produto: m.product_name,
+                  Código: m.barcode || "",
+                  Comprador: m.customer_name || "",
+                  Operador: m.operator_name || "",
+                  Quantidade: m.delta,
+                  "Estoque atual": m.current_stock ?? "",
+                })),
+              )
+            }
+          />
         </div>
       </div>
 
@@ -338,17 +397,17 @@ function StockTab() {
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
-              <th className="px-4 py-3">Data</th>
-              <th className="px-4 py-3">Produto</th>
-              <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3">Comprador</th>
-              <th className="px-4 py-3">Operador</th>
-              <th className="px-4 py-3 text-right">Quantidade</th>
-              <th className="px-4 py-3 text-right">Estoque atual</th>
+              <SortableTh label="Data" sortKey="date" sort={sort} onToggle={toggle} />
+              <SortableTh label="Produto" sortKey="product" sort={sort} onToggle={toggle} />
+              <SortableTh label="Código" sortKey="barcode" sort={sort} onToggle={toggle} />
+              <SortableTh label="Comprador" sortKey="customer" sort={sort} onToggle={toggle} />
+              <SortableTh label="Operador" sortKey="operator" sort={sort} onToggle={toggle} />
+              <SortableTh label="Quantidade" sortKey="delta" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label="Estoque atual" sortKey="current" sort={sort} onToggle={toggle} align="right" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {movements.map((m) => (
+            {rows.map((m) => (
               <tr key={m.id} className="hover:bg-secondary/30">
                 <td className="tabular px-4 py-3">{dateTime(m.created_at)}</td>
                 <td className="px-4 py-3">{m.product_name}</td>
@@ -391,6 +450,15 @@ function StockReportTab() {
   const totalValue = active.reduce((s, p) => s + p.stock * p.price, 0);
   const lowStock = active.filter((p) => p.stock <= p.min_stock).length;
 
+  const { sort, toggle, sorted } = useSort<(typeof active)[number]>("name");
+  const rows = sorted(active, {
+    name: (p) => p.name,
+    barcode: (p) => p.barcode,
+    price: (p) => p.price,
+    stock: (p) => p.stock,
+    value: (p) => p.stock * p.price,
+  });
+
   return (
     <>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -400,19 +468,37 @@ function StockReportTab() {
         <SummaryCard label="Estoque baixo" value={String(lowStock)} />
       </div>
 
+      <div className="mt-4 flex justify-end">
+        <ExportButton
+          onClick={() =>
+            exportToExcel(
+              "relatorio-estoque",
+              "Relatório do estoque",
+              rows.map((p) => ({
+                Produto: p.name,
+                Código: p.barcode,
+                Preço: p.price,
+                Estoque: p.stock,
+                "Valor total": p.stock * p.price,
+              })),
+            )
+          }
+        />
+      </div>
+
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
-              <th className="px-4 py-3">Produto</th>
-              <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3 text-right">Preço</th>
-              <th className="px-4 py-3 text-right">Estoque</th>
-              <th className="px-4 py-3 text-right">Valor total</th>
+              <SortableTh label="Produto" sortKey="name" sort={sort} onToggle={toggle} />
+              <SortableTh label="Código" sortKey="barcode" sort={sort} onToggle={toggle} />
+              <SortableTh label="Preço" sortKey="price" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label="Estoque" sortKey="stock" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label="Valor total" sortKey="value" sort={sort} onToggle={toggle} align="right" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {active.map((p) => (
+            {rows.map((p) => (
               <tr key={p.id} className="hover:bg-secondary/30">
                 <td className="px-4 py-3">{p.name}</td>
                 <td className="tabular px-4 py-3 text-muted-foreground">{p.barcode}</td>
