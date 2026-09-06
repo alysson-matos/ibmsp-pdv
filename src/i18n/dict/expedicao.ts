@@ -1,1 +1,18 @@
-export const EXPEDICAO: Record<string, string> = {};
+export const EXPEDICAO: Record<string, string> = {
+  "Em aberto": "Open",
+  "A separar": "To pack",
+  Separado: "Packed",
+  Entregues: "Delivered",
+  "Buscar por comprador, produto ou código": "Search by customer, product or code",
+  "Nenhuma compra nesta lista.": "No orders in this list.",
+  "Sem nome": "No name",
+  "sem código": "no code",
+  "Marcar separado": "Mark as packed",
+  "Marcar entregue": "Mark as delivered",
+  "Entregue {date}": "Delivered {date}",
+  Reabrir: "Reopen",
+  Voltar: "Back",
+  "{pendentes} compra(s) a separar · {separados} pronta(s) para retirada":
+    "{pendentes} order(s) to pack · {separados} ready for pickup",
+  "Compra marcada como {status}": "Order marked as {status}",
+};

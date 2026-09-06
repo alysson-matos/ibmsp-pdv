@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import { ReceiptText, ChevronDown, Boxes, PackageSearch, FileSpreadsheet } from "lucide-react";
 import { exportToExcel, SortableTh, useSort } from "@/lib/table-tools";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n";
 
 import {
   listOperators,
@@ -74,18 +75,19 @@ export const Route = createFileRoute("/historico")({
 });
 
 function HistoricoPage() {
+  const t = useT();
   const [tab, setTab] = useState<"vendas" | "estoque" | "relatorio">("vendas");
 
   const tabs = [
-    { id: "vendas", label: "Histórico de vendas", icon: ReceiptText },
-    { id: "estoque", label: "Controle de estoque", icon: Boxes },
-    { id: "relatorio", label: "Relatório do estoque", icon: PackageSearch },
+    { id: "vendas", label: t("Histórico de vendas"), icon: ReceiptText },
+    { id: "estoque", label: t("Controle de estoque"), icon: Boxes },
+    { id: "relatorio", label: t("Relatório do estoque"), icon: PackageSearch },
   ] as const;
 
   return (
     <main className="mx-auto max-w-[1600px] p-4">
       <h1 className="flex items-center gap-2 text-2xl font-bold">
-        <ReceiptText className="size-6 text-primary" /> Histórico
+        <ReceiptText className="size-6 text-primary" /> {t("Histórico")}
       </h1>
 
       <div className="mt-4 flex flex-wrap gap-1.5">

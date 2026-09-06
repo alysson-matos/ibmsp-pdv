@@ -72,9 +72,14 @@ export const Route = createFileRoute("/")({
       {error.message}
     </div>
   ),
-  notFoundComponent: () => <div className="p-8">{"Nada por aqui."}</div>,
+  notFoundComponent: NotFound,
   component: PdvPage,
 });
+
+function NotFound() {
+  const t = useT();
+  return <div className="p-8">{t("Nada por aqui.")}</div>;
+}
 
 type CartLine = { product: Product; quantity: number };
 

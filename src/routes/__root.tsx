@@ -27,6 +27,34 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
+import { LanguageProvider, useI18n, useT, type Lang } from "@/i18n";
+
+function LanguageSwitcher() {
+  const { lang, setLang, t } = useI18n();
+  return (
+    <div
+      className="flex items-center gap-1 rounded-md border border-input p-0.5"
+      role="group"
+      aria-label={t("Idioma")}
+    >
+      {(["pt", "en"] as Lang[]).map((code) => (
+        <button
+          key={code}
+          type="button"
+          onClick={() => setLang(code)}
+          aria-pressed={lang === code}
+          className={`rounded px-2 py-1 text-xs font-semibold uppercase transition-colors ${
+            lang === code
+              ? "bg-secondary text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {code === "pt" ? "PT" : "EN"}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 
 function NotFoundComponent() {
