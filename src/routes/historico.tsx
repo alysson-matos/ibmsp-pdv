@@ -206,7 +206,7 @@ function SalesTab() {
                   : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground",
               )}
             >
-              {m === "todas" ? t("Todas") : t(PAYMENT_LABEL[m])}
+              {m === "todas" ? t("Todas") : t(PAYMENT_LABEL[m] ?? m)}
             </button>
           ))}
         </div>
@@ -267,7 +267,7 @@ function SalesTab() {
                   <td className="px-4 py-3 text-muted-foreground">
                     {t("{n} un.", { n: sale.items.reduce((s, i) => s + i.quantity, 0) })}
                   </td>
-                  <td className="px-4 py-3">{t(PAYMENT_LABEL[sale.payment_method])}</td>
+                  <td className="px-4 py-3">{t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)}</td>
                   <td className="tabular px-4 py-3 text-right font-semibold">{brl(sale.total)}</td>
                   <td className="px-4 py-3 text-right">
                     <ChevronDown
