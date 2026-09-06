@@ -564,3 +564,11 @@ function SummaryCard({
     </div>
   );
 }
+
+function ExportButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="outline" onClick={onClick}>
+      <FileSpreadsheet className="size-4" /> Exportar Excel
+    </Button>
+  );
+}
