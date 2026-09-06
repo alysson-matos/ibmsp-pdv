@@ -3,7 +3,8 @@ import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@ta
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Boxes, Pencil, Plus, Minus, Trash2, AlertTriangle } from "lucide-react";
+import { Boxes, Pencil, Plus, Minus, Trash2, AlertTriangle, FileSpreadsheet } from "lucide-react";
+import { exportToExcel, SortableTh, useSort } from "@/lib/table-tools";
 
 import {
   adjustStock,
@@ -121,6 +122,31 @@ function InventarioPage() {
       p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode.includes(search.trim()),
   );
 
+  const { sort, toggle, sorted } = useSort<Product>("name");
+  const rows = sorted(filtered, {
+    name: (p) => p.name,
+    barcode: (p) => p.barcode,
+    price: (p) => p.price,
+    stock: (p) => p.stock,
+    active: (p) => (p.active ? "Ativo" : "Inativo"),
+  });
+
+  function exportXlsx() {
+    void exportToExcel(
+      "inventario",
+      "Inventário",
+      rows.map((p) => ({
+        Produto: p.name,
+        Código: p.barcode,
+        Preço: p.price,
+        Estoque: p.stock,
+        "Estoque mínimo": p.min_stock,
+        Status: p.active ? "Ativo" : "Inativo",
+        "Valor total": p.stock * p.price,
+      })),
+    );
+  }
+
   function openNew() {
     setForm(emptyForm);
     setOpen(true);
@@ -175,6 +201,9 @@ function InventarioPage() {
             placeholder="Buscar por nome ou código"
             className="w-64"
           />
+          <Button variant="outline" onClick={exportXlsx}>
+            <FileSpreadsheet className="size-4" /> Exportar Excel
+          </Button>
           <Button onClick={openNew}>
             <Plus className="size-4" /> Novo produto
           </Button>
@@ -185,16 +214,16 @@ function InventarioPage() {
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
-              <th className="px-4 py-3">Produto</th>
-              <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3 text-right">Preço</th>
-              <th className="px-4 py-3 text-center">Estoque</th>
-              <th className="px-4 py-3 text-center">Status</th>
+              <SortableTh label="Produto" sortKey="name" sort={sort} onToggle={toggle} />
+              <SortableTh label="Código" sortKey="barcode" sort={sort} onToggle={toggle} />
+              <SortableTh label="Preço" sortKey="price" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label="Estoque" sortKey="stock" sort={sort} onToggle={toggle} align="center" />
+              <SortableTh label="Status" sortKey="active" sort={sort} onToggle={toggle} align="center" />
               <th className="px-4 py-3 text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {filtered.map((p) => {
+            {rows.map((p) => {
               const low = p.stock <= p.min_stock;
               return (
                 <tr key={p.id} className="hover:bg-secondary/30">
