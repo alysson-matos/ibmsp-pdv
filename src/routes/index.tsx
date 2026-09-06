@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
+import { useT } from "@/i18n";
 
 
 const productsQuery = queryOptions({
@@ -71,7 +72,7 @@ export const Route = createFileRoute("/")({
       {error.message}
     </div>
   ),
-  notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  notFoundComponent: () => <div className="p-8">{"Nada por aqui."}</div>,
   component: PdvPage,
 });
 
@@ -85,6 +86,7 @@ const paymentIcons: Record<PaymentMethod, typeof Banknote> = {
 };
 
 function PdvPage() {
+  const t = useT();
   const { data: products } = useSuspenseQuery(productsQuery);
   const { data: operators } = useSuspenseQuery(operatorsQuery);
   const queryClient = useQueryClient();
@@ -588,6 +590,7 @@ function PdvPage() {
 }
 
 function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
+  const t = useT();
   return (
     <div className="rounded-xl border border-accent/50 bg-accent/10 p-4">
       <div className="flex items-center justify-between">
