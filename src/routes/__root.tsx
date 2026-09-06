@@ -297,15 +297,17 @@ function RootShellContent() {
                   activeProps={{ className: "bg-secondary !text-foreground font-semibold" }}
                 >
                   <Icon className="size-4" />
-                  {label}
+                  {t(label)}
                 </Link>
               ))}
             </nav>
             <div className="ml-auto flex items-center gap-3">
+              <LanguageSwitcher />
               <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground">
                 <ShieldCheck className="size-3.5" />
-                {isAdmin ? "Admin" : "Operação"}
+                {isAdmin ? t("Admin") : t("Operação")}
               </span>
+
               <button
                 onClick={async () => {
                   // Unmount protected routes before clearing the server session so

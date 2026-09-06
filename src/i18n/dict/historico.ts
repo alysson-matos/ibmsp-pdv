@@ -1,1 +1,22 @@
-export const HISTORICO: Record<string, string> = {};
+export const HISTORICO: Record<string, string> = {
+  "Histórico de vendas": "Sales history",
+  "Controle de estoque": "Stock control",
+  "Relatório do estoque": "Stock report",
+  "{n} un.": "{n} units",
+  "Desconto aplicado:": "Discount applied:",
+  Recebido: "Received",
+  Troco: "Change",
+  "Nenhuma venda no período selecionado.": "No sales in the selected period.",
+  "Nenhuma movimentação no período selecionado.": "No movements in the selected period.",
+  "Nenhum produto ativo.": "No active products.",
+  Faturamento: "Revenue",
+  "Movimentações": "Movements",
+  "Saídas": "Outflows",
+  "Estoque atual": "Current stock",
+  "Produtos ativos": "Active products",
+  "Total em estoque": "Total in stock",
+  "Valor do estoque": "Stock value",
+  "Estoque baixo": "Low stock",
+  "Valor total": "Total value",
+  Desconto: "Discount",
+};
