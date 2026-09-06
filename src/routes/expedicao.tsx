@@ -16,6 +16,7 @@ import { brl, dateTime, PAYMENT_LABEL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 
 const shippingQuery = queryOptions({
   queryKey: ["shipping"],
@@ -47,12 +48,14 @@ export const Route = createFileRoute("/expedicao")({
   component: ExpedicaoPage,
 });
 
-const FILTERS: { key: SaleStatus | "abertas"; label: string }[] = [
-  { key: "abertas", label: "Em aberto" },
-  { key: "pendente", label: "A separar" },
-  { key: "separado", label: "Separado" },
-  { key: "entregue", label: "Entregues" },
-];
+function useFilters(t: (s: string, vars?: Record<string, string | number>) => string): { key: SaleStatus | "abertas"; label: string }[] {
+  return [
+    { key: "abertas", label: t("Em aberto") },
+    { key: "pendente", label: t("A separar") },
+    { key: "separado", label: t("Separado") },
+    { key: "entregue", label: t("Entregues") },
+  ];
+}
 
 const statusStyle: Record<SaleStatus, string> = {
   pendente: "border-primary/50 bg-primary/15 text-primary",
@@ -61,19 +64,21 @@ const statusStyle: Record<SaleStatus, string> = {
 };
 
 function ExpedicaoPage() {
+  const t = useT();
   const { data: sales } = useSuspenseQuery(shippingQuery);
   const queryClient = useQueryClient();
   const updateFn = useServerFn(setSaleStatus);
 
   const [filter, setFilter] = useState<SaleStatus | "abertas">("abertas");
   const [search, setSearch] = useState("");
+  const FILTERS = useFilters(t);
 
   const mutation = useMutation({
     mutationFn: (vars: { id: string; status: SaleStatus }) => updateFn({ data: vars }),
     onSuccess: (_r, vars) => {
       queryClient.invalidateQueries({ queryKey: ["shipping"] });
       queryClient.invalidateQueries({ queryKey: ["sales"] });
-      toast.success(`Compra marcada como ${SALE_STATUS_LABEL[vars.status].toLowerCase()}`);
+      toast.success(t("Compra marcada como {status}", { status: t(SALE_STATUS_LABEL[vars.status]).toLowerCase() }));
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -102,15 +107,15 @@ function ExpedicaoPage() {
     <main className="mx-auto max-w-[1200px] space-y-4 p-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">Expedição</h1>
+          <h1 className="text-xl font-bold">{t("Expedição")}</h1>
           <p className="text-sm text-muted-foreground">
-            {pendentes} compra(s) a separar · {separados} pronta(s) para retirada
+            {t("{pendentes} compra(s) a separar · {separados} pronta(s) para retirada", { pendentes, separados })}
           </p>
         </div>
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por comprador, produto ou código"
+          placeholder={t("Buscar por comprador, produto ou código")}
           className="h-10 w-full sm:w-80"
         />
       </div>
@@ -136,7 +141,7 @@ function ExpedicaoPage() {
       {filtered.length === 0 ? (
         <div className="grid place-items-center gap-2 rounded-xl border border-border bg-card px-4 py-20 text-center text-muted-foreground">
           <PackageSearch className="size-10 opacity-40" />
-          <p className="text-sm">Nenhuma compra nesta lista.</p>
+          <p className="text-sm">{t("Nenhuma compra nesta lista.")}</p>
         </div>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
@@ -164,13 +169,14 @@ function ShippingCard({
   busy: boolean;
   onChange: (status: SaleStatus) => void;
 }) {
+  const t = useT();
   return (
     <article className="flex h-full flex-col rounded-xl border border-border bg-card p-4 shadow-lg">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 truncate text-base font-semibold">
             <User className="size-4 shrink-0 text-primary" />
-            {sale.customer_name || "Sem nome"}
+            {sale.customer_name || t("Sem nome")}
           </p>
           <p className="tabular text-xs text-muted-foreground">
             {dateTime(sale.created_at)} · {PAYMENT_LABEL[sale.payment_method]} · {brl(sale.total)}
@@ -182,7 +188,7 @@ function ShippingCard({
             statusStyle[sale.status],
           )}
         >
-          {SALE_STATUS_LABEL[sale.status]}
+          {t(SALE_STATUS_LABEL[sale.status])}
         </span>
       </div>
 
@@ -195,7 +201,7 @@ function ShippingCard({
                 {item.product_name}
               </span>
               <span className="tabular block text-xs text-muted-foreground">
-                {item.barcode ?? "sem código"}
+                {item.barcode ?? t("sem código")}
               </span>
             </span>
             <span className="tabular text-muted-foreground">{brl(item.subtotal)}</span>
@@ -206,18 +212,18 @@ function ShippingCard({
       <div className="mt-4 flex flex-wrap gap-2">
         {sale.status === "pendente" && (
           <Button size="sm" variant="outline" disabled={busy} onClick={() => onChange("separado")}>
-            <PackageSearch className="size-4" /> Marcar separado
+            <PackageSearch className="size-4" /> {t("Marcar separado")}
           </Button>
         )}
         {sale.status !== "entregue" && (
           <Button size="sm" disabled={busy} onClick={() => onChange("entregue")}>
-            <PackageCheck className="size-4" /> Marcar entregue
+            <PackageCheck className="size-4" /> {t("Marcar entregue")}
           </Button>
         )}
         {sale.status === "entregue" && (
           <>
             <span className="text-xs text-muted-foreground">
-              Entregue {sale.delivered_at ? dateTime(sale.delivered_at) : ""}
+              {t("Entregue {date}", { date: sale.delivered_at ? dateTime(sale.delivered_at) : "" })}
             </span>
             <Button
               size="sm"
@@ -226,13 +232,13 @@ function ShippingCard({
               onClick={() => onChange("pendente")}
               className="ml-auto"
             >
-              <Undo2 className="size-4" /> Reabrir
+              <Undo2 className="size-4" /> {t("Reabrir")}
             </Button>
           </>
         )}
         {sale.status === "separado" && (
           <Button size="sm" variant="ghost" disabled={busy} onClick={() => onChange("pendente")}>
-            <Undo2 className="size-4" /> Voltar
+            <Undo2 className="size-4" /> {t("Voltar")}
           </Button>
         )}
       </div>

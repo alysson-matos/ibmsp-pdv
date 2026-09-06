@@ -173,6 +173,7 @@ const navItems = [
 
 function UnlockScreen() {
   const router = useRouter();
+  const t = useT();
   const unlockFn = useServerFn(unlock);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -185,7 +186,7 @@ function UnlockScreen() {
     try {
       const res = await unlockFn({ data: { password } });
       if (!res.ok) {
-        setError("Senha incorreta.");
+        setError(t("Senha incorreta."));
         setPassword("");
         return;
       }
@@ -208,13 +209,14 @@ function UnlockScreen() {
       >
         <div className="flex items-center gap-3 text-primary">
           <Lock className="size-5" />
+          <div className="ml-auto">
+            <LanguageSwitcher />
+          </div>
         </div>
 
-
-
-        <h1 className="mt-4 text-lg font-semibold text-foreground">Acesso restrito</h1>
+        <h1 className="mt-4 text-lg font-semibold text-foreground">{t("Acesso restrito")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Digite a senha para entrar no sistema.
+          {t("Digite a senha para entrar no sistema.")}
         </p>
         <input
           type="password"
@@ -222,7 +224,7 @@ function UnlockScreen() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Senha"
+          placeholder={t("Senha")}
           className="mt-4 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
         />
         {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
@@ -231,7 +233,7 @@ function UnlockScreen() {
           disabled={loading || password.length === 0}
           className="mt-4 w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {loading ? "Verificando..." : "Entrar"}
+          {loading ? t("Verificando...") : t("Entrar")}
         </button>
       </form>
     </div>
@@ -239,11 +241,12 @@ function UnlockScreen() {
 }
 
 function AccessDenied() {
+  const t = useT();
   return (
     <div className="mx-auto max-w-md px-4 py-24 text-center">
-      <h2 className="text-lg font-semibold text-foreground">Acesso restrito</h2>
+      <h2 className="text-lg font-semibold text-foreground">{t("Acesso restrito")}</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Esta área é exclusiva do administrador. Saia e entre com a senha de admin.
+        {t("Esta área é exclusiva do administrador. Saia e entre com a senha de admin.")}
       </p>
     </div>
   );

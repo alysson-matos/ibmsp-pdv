@@ -117,6 +117,7 @@ function HistoricoPage() {
 }
 
 function SalesTab() {
+  const t = useT();
   const today = todayISO();
   const [filters, setFilters] = useState<Filters>({
     from: today,
@@ -152,7 +153,7 @@ function SalesTab() {
       <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
         <div className="grid gap-1.5">
           <Label htmlFor="from" className="text-xs uppercase tracking-widest text-muted-foreground">
-            De
+            {t("De")}
           </Label>
           <Input
             id="from"
@@ -164,7 +165,7 @@ function SalesTab() {
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="to" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Até
+            {t("Até")}
           </Label>
           <Input
             id="to"
@@ -176,7 +177,7 @@ function SalesTab() {
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="operator" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Operador
+            {t("Operador")}
           </Label>
           <select
             id="operator"
@@ -184,7 +185,7 @@ function SalesTab() {
             onChange={(e) => setFilters({ ...filters, operator_id: e.target.value })}
             className="h-9 rounded-md border border-border bg-background px-2 text-sm"
           >
-            <option value="todos">Todos</option>
+            <option value="todos">{t("Todos")}</option>
             {operators.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name}
@@ -205,7 +206,7 @@ function SalesTab() {
                   : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground",
               )}
             >
-              {m === "todas" ? "Todas" : PAYMENT_LABEL[m]}
+              {m === "todas" ? t("Todas") : t(PAYMENT_LABEL[m])}
             </button>
           ))}
         </div>
@@ -216,16 +217,16 @@ function SalesTab() {
           onClick={() =>
             exportToExcel(
               "historico-vendas",
-              "Vendas",
+              t("Vendas"),
               rows.map((s) => ({
-                Data: dateTime(s.created_at),
-                Comprador: s.customer_name || "",
-                Operador: s.operator_name || "",
-                Itens: s.items.reduce((sum, i) => sum + i.quantity, 0),
-                Produtos: s.items.map((i) => `${i.quantity}× ${i.product_name}`).join(", "),
-                Pagamento: PAYMENT_LABEL[s.payment_method] ?? s.payment_method,
-                Desconto: s.discount,
-                Total: s.total,
+                [t("Data")]: dateTime(s.created_at),
+                [t("Comprador")]: s.customer_name || "",
+                [t("Operador")]: s.operator_name || "",
+                [t("Itens")]: s.items.reduce((sum, i) => sum + i.quantity, 0),
+                [t("Produtos")]: s.items.map((i) => `${i.quantity}× ${i.product_name}`).join(", "),
+                [t("Pagamento")]: t(PAYMENT_LABEL[s.payment_method] ?? s.payment_method),
+                [t("Desconto")]: s.discount,
+                [t("Total")]: s.total,
               })),
             )
           }
@@ -233,10 +234,10 @@ function SalesTab() {
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <SummaryCard label="Vendas" value={String(sales.length)} highlight />
-        <SummaryCard label="Faturamento" value={brl(revenue)} highlight />
+        <SummaryCard label={t("Vendas")} value={String(sales.length)} highlight />
+        <SummaryCard label={t("Faturamento")} value={brl(revenue)} highlight />
         {byMethod.map((m) => (
-          <SummaryCard key={m.method} label={PAYMENT_LABEL[m.method]!} value={brl(m.total)} />
+          <SummaryCard key={m.method} label={t(PAYMENT_LABEL[m.method]!)} value={brl(m.total)} />
         ))}
       </div>
 
@@ -244,12 +245,12 @@ function SalesTab() {
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
-              <SortableTh label="Data" sortKey="date" sort={sort} onToggle={toggle} />
-              <SortableTh label="Comprador" sortKey="customer" sort={sort} onToggle={toggle} />
-              <SortableTh label="Operador" sortKey="operator" sort={sort} onToggle={toggle} />
-              <SortableTh label="Itens" sortKey="items" sort={sort} onToggle={toggle} />
-              <SortableTh label="Pagamento" sortKey="payment" sort={sort} onToggle={toggle} />
-              <SortableTh label="Total" sortKey="total" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label={t("Data")} sortKey="date" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Comprador")} sortKey="customer" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Operador")} sortKey="operator" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Itens")} sortKey="items" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Pagamento")} sortKey="payment" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Total")} sortKey="total" sort={sort} onToggle={toggle} align="right" />
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -264,9 +265,9 @@ function SalesTab() {
                   <td className="px-4 py-3">{sale.customer_name || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{sale.operator_name || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {sale.items.reduce((s, i) => s + i.quantity, 0)} un.
+                    {t("{n} un.", { n: sale.items.reduce((s, i) => s + i.quantity, 0) })}
                   </td>
-                  <td className="px-4 py-3">{PAYMENT_LABEL[sale.payment_method]}</td>
+                  <td className="px-4 py-3">{t(PAYMENT_LABEL[sale.payment_method])}</td>
                   <td className="tabular px-4 py-3 text-right font-semibold">{brl(sale.total)}</td>
                   <td className="px-4 py-3 text-right">
                     <ChevronDown
@@ -295,13 +296,13 @@ function SalesTab() {
                       </ul>
                       {sale.discount > 0 && (
                         <p className="mt-2 text-muted-foreground">
-                          Desconto aplicado: <span className="tabular">{brl(sale.discount)}</span>
+                          {t("Desconto aplicado:")} <span className="tabular">{brl(sale.discount)}</span>
                         </p>
                       )}
                       {sale.payment_method === "dinheiro" && sale.amount_received != null && (
                         <p className="mt-1 text-muted-foreground">
-                          Recebido <span className="tabular">{brl(sale.amount_received)}</span> ·
-                          Troco <span className="tabular">{brl(sale.change_amount)}</span>
+                          {t("Recebido")} <span className="tabular">{brl(sale.amount_received)}</span> ·
+                          {" "}{t("Troco")} <span className="tabular">{brl(sale.change_amount)}</span>
                         </p>
                       )}
                     </td>
@@ -312,7 +313,7 @@ function SalesTab() {
             {sales.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                  Nenhuma venda no período selecionado.
+                  {t("Nenhuma venda no período selecionado.")}
                 </td>
               </tr>
             )}
