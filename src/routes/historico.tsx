@@ -325,6 +325,7 @@ function SalesTab() {
 }
 
 function StockTab() {
+  const t = useT();
   const today = todayISO();
   const [range, setRange] = useState({
     from: today,
@@ -352,7 +353,7 @@ function StockTab() {
       <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
         <div className="grid gap-1.5">
           <Label htmlFor="mfrom" className="text-xs uppercase tracking-widest text-muted-foreground">
-            De
+            {t("De")}
           </Label>
           <Input
             id="mfrom"
@@ -364,7 +365,7 @@ function StockTab() {
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="mto" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Até
+            {t("Até")}
           </Label>
           <Input
             id="mto"
@@ -375,21 +376,21 @@ function StockTab() {
           />
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-3">
-          <SummaryCard label="Movimentações" value={String(movements.length)} highlight />
-          <SummaryCard label="Saídas" value={`-${saidas}`} />
+          <SummaryCard label={t("Movimentações")} value={String(movements.length)} highlight />
+          <SummaryCard label={t("Saídas")} value={`-${saidas}`} />
           <ExportButton
             onClick={() =>
               exportToExcel(
                 "controle-estoque",
-                "Controle de estoque",
+                t("Controle de estoque"),
                 rows.map((m) => ({
-                  Data: dateTime(m.created_at),
-                  Produto: m.product_name,
-                  Código: m.barcode || "",
-                  Comprador: m.customer_name || "",
-                  Operador: m.operator_name || "",
-                  Quantidade: m.delta,
-                  "Estoque atual": m.current_stock ?? "",
+                  [t("Data")]: dateTime(m.created_at),
+                  [t("Produto")]: m.product_name,
+                  [t("Código")]: m.barcode || "",
+                  [t("Comprador")]: m.customer_name || "",
+                  [t("Operador")]: m.operator_name || "",
+                  [t("Quantidade")]: m.delta,
+                  [t("Estoque atual")]: m.current_stock ?? "",
                 })),
               )
             }
@@ -402,13 +403,13 @@ function StockTab() {
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
-              <SortableTh label="Data" sortKey="date" sort={sort} onToggle={toggle} />
-              <SortableTh label="Produto" sortKey="product" sort={sort} onToggle={toggle} />
-              <SortableTh label="Código" sortKey="barcode" sort={sort} onToggle={toggle} />
-              <SortableTh label="Comprador" sortKey="customer" sort={sort} onToggle={toggle} />
-              <SortableTh label="Operador" sortKey="operator" sort={sort} onToggle={toggle} />
-              <SortableTh label="Quantidade" sortKey="delta" sort={sort} onToggle={toggle} align="right" />
-              <SortableTh label="Estoque atual" sortKey="current" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label={t("Data")} sortKey="date" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Produto")} sortKey="product" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Código")} sortKey="barcode" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Comprador")} sortKey="customer" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Operador")} sortKey="operator" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Quantidade")} sortKey="delta" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label={t("Estoque atual")} sortKey="current" sort={sort} onToggle={toggle} align="right" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -435,7 +436,7 @@ function StockTab() {
             {movements.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                  Nenhuma movimentação no período selecionado.
+                  {t("Nenhuma movimentação no período selecionado.")}
                 </td>
               </tr>
             )}
