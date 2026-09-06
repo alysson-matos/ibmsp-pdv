@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
+import { useT } from "@/i18n";
 
 
 const productsQuery = queryOptions({
@@ -71,9 +72,14 @@ export const Route = createFileRoute("/")({
       {error.message}
     </div>
   ),
-  notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  notFoundComponent: NotFound,
   component: PdvPage,
 });
+
+function NotFound() {
+  const t = useT();
+  return <div className="p-8">{t("Nada por aqui.")}</div>;
+}
 
 type CartLine = { product: Product; quantity: number };
 
@@ -85,6 +91,7 @@ const paymentIcons: Record<PaymentMethod, typeof Banknote> = {
 };
 
 function PdvPage() {
+  const t = useT();
   const { data: products } = useSuspenseQuery(productsQuery);
   const { data: operators } = useSuspenseQuery(operatorsQuery);
   const queryClient = useQueryClient();
@@ -141,11 +148,16 @@ function PdvPage() {
       const existing = prev.find((l) => l.product.id === product.id);
       const currentQty = existing?.quantity ?? 0;
       if (product.stock <= 0) {
-        toast.error(`${product.name} está sem estoque e não pode ser vendido`);
+        toast.error(t("{name} está sem estoque e não pode ser vendido", { name: product.name }));
         return prev;
       }
       if (currentQty + 1 > product.stock) {
-        toast.error(`Estoque insuficiente: restam ${product.stock} un. de ${product.name}`);
+        toast.error(
+          t("Estoque insuficiente: restam {stock} un. de {name}", {
+            stock: product.stock,
+            name: product.name,
+          }),
+        );
         return prev;
       }
       if (existing) {
@@ -166,7 +178,7 @@ function PdvPage() {
     const match = byBarcode ?? (suggestions.length === 1 ? suggestions[0] : undefined);
 
     if (!match) {
-      toast.error(`Produto não encontrado para "${code}"`);
+      toast.error(t('Produto não encontrado para "{code}"', { code }));
       return;
     }
     addProduct(match);
@@ -179,7 +191,12 @@ function PdvPage() {
         if (l.product.id !== productId) return [l];
         if (quantity <= 0) return [];
         if (quantity > l.product.stock) {
-          toast.error(`Restam apenas ${l.product.stock} un. de ${l.product.name}`);
+          toast.error(
+            t("Restam apenas {stock} un. de {name}", {
+              stock: l.product.stock,
+              name: l.product.name,
+            }),
+          );
           return [l];
         }
         return [{ ...l, quantity }];
@@ -204,26 +221,26 @@ function PdvPage() {
       setCustomer("");
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["sales"] });
-      toast.success("Venda finalizada!");
+      toast.success(t("Venda finalizada!"));
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
   function finalize() {
     if (cart.length === 0) {
-      toast.error("Adicione produtos ao carrinho");
+      toast.error(t("Adicione produtos ao carrinho"));
       return;
     }
     if (!customer.trim()) {
-      toast.error("Informe o nome do comprador");
+      toast.error(t("Informe o nome do comprador"));
       return;
     }
     if (!operatorId) {
-      toast.error("Selecione o operador da venda");
+      toast.error(t("Selecione o operador da venda"));
       return;
     }
     if (payment === "dinheiro" && received && receivedValue < total) {
-      toast.error("Valor recebido menor que o total");
+      toast.error(t("Valor recebido menor que o total"));
       return;
     }
     mutation.mutate({
@@ -295,7 +312,7 @@ function PdvPage() {
 
   return (
     <main className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-[1fr_400px]">
-      <h1 className="sr-only">PDV - IBMemorial</h1>
+      <h1 className="sr-only">{t("PDV")} - IBMemorial</h1>
 
 
 
@@ -306,7 +323,7 @@ function PdvPage() {
           className="rounded-xl border border-border bg-card p-4 shadow-lg"
         >
           <Label htmlFor="scan" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Leitor de código de barras
+            {t("Leitor de código de barras")}
           </Label>
           <div className="mt-2 flex items-center gap-3 rounded-lg border-2 border-primary/40 bg-background px-3 focus-within:border-primary">
             <ScanBarcode className="size-6 shrink-0 text-primary" />
@@ -317,11 +334,11 @@ function PdvPage() {
               autoComplete="off"
               value={scan}
               onChange={(e) => setScan(e.target.value)}
-              placeholder="Passe o produto no leitor ou digite o código / nome"
+              placeholder={t("Passe o produto no leitor ou digite o código / nome")}
               className="tabular h-14 border-0 bg-transparent text-lg shadow-none focus-visible:ring-0"
             />
             <Button type="submit" size="sm" className="shrink-0">
-              Adicionar
+              {t("Adicionar")}
             </Button>
           </div>
 
@@ -353,11 +370,11 @@ function PdvPage() {
         <div className="min-h-[320px] rounded-xl border border-border bg-card shadow-lg">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest">
-              <ShoppingCart className="size-4 text-primary" /> Carrinho
+              <ShoppingCart className="size-4 text-primary" /> {t("Carrinho")}
             </h2>
             {cart.length > 0 && (
               <Button variant="ghost" size="sm" onClick={() => setCart([])}>
-                Limpar
+                {t("Limpar")}
               </Button>
             )}
           </div>
@@ -365,7 +382,7 @@ function PdvPage() {
           {cart.length === 0 ? (
             <div className="grid place-items-center gap-2 px-4 py-16 text-center text-muted-foreground">
               <ScanBarcode className="size-10 opacity-40" />
-              <p className="text-sm">Nenhum item. Passe o primeiro produto no leitor.</p>
+              <p className="text-sm">{t("Nenhum item. Passe o primeiro produto no leitor.")}</p>
             </div>
           ) : (
             <ul className="divide-y divide-border">
@@ -383,7 +400,7 @@ function PdvPage() {
                       size="icon"
                       className="size-8"
                       onClick={() => setQuantity(line.product.id, line.quantity - 1)}
-                      aria-label="Diminuir quantidade"
+                      aria-label={t("Diminuir quantidade")}
                     >
                       <Minus className="size-4" />
                     </Button>
@@ -395,7 +412,7 @@ function PdvPage() {
                       size="icon"
                       className="size-8"
                       onClick={() => setQuantity(line.product.id, line.quantity + 1)}
-                      aria-label="Aumentar quantidade"
+                      aria-label={t("Aumentar quantidade")}
                     >
                       <Plus className="size-4" />
                     </Button>
@@ -408,7 +425,7 @@ function PdvPage() {
                     size="icon"
                     className="size-8 text-muted-foreground hover:text-destructive"
                     onClick={() => setQuantity(line.product.id, 0)}
-                    aria-label="Remover item"
+                    aria-label={t("Remover item")}
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -424,14 +441,14 @@ function PdvPage() {
       <aside className="flex h-fit flex-col gap-4 lg:sticky lg:top-[4.5rem]">
         <div className="rounded-xl border border-border bg-card p-4 shadow-lg">
           <Label htmlFor="operator" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Operador da venda <span className="text-destructive">*</span>
+            {t("Operador da venda")} <span className="text-destructive">*</span>
           </Label>
 
           {activeOperators.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
-              Nenhum operador cadastrado.{" "}
+              {t("Nenhum operador cadastrado.")}{" "}
               <Link to="/operadores" className="text-primary underline">
-                Cadastrar operadores
+                {t("Cadastrar operadores")}
               </Link>
             </p>
           ) : (
@@ -447,7 +464,7 @@ function PdvPage() {
                 operatorId ? "border-primary/40" : "border-destructive/60",
               )}
             >
-              <option value="">Selecione o operador</option>
+              <option value="">{t("Selecione o operador")}</option>
               {activeOperators.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name}
@@ -456,7 +473,7 @@ function PdvPage() {
             </select>
           )}
           {!operatorId && activeOperators.length > 0 && (
-            <p className="mt-2 text-xs text-destructive">Obrigatório selecionar o operador.</p>
+            <p className="mt-2 text-xs text-destructive">{t("Obrigatório selecionar o operador.")}</p>
 
           )}
         </div>
@@ -464,30 +481,30 @@ function PdvPage() {
         <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-lg">
         <div className="space-y-1">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Subtotal</span>
+            <span>{t("Subtotal")}</span>
             <span className="tabular">{brl(subtotal)}</span>
           </div>
           <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-            <Label htmlFor="discount">Desconto</Label>
+            <Label htmlFor="discount">{t("Desconto")}</Label>
             <Input
               id="discount"
               inputMode="decimal"
               value={discount}
               onChange={(e) => setDiscount(e.target.value)}
-              placeholder="0,00"
+              placeholder={t("0,00")}
               className="tabular h-8 w-28 text-right"
             />
           </div>
         </div>
 
         <div className="rounded-lg bg-secondary/60 p-4">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Total a pagar</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("Total a pagar")}</p>
           <p className="tabular mt-1 text-4xl font-bold text-primary">{brl(total)}</p>
         </div>
 
         <div>
           <p className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
-            Forma de pagamento
+            {t("Forma de pagamento")}
           </p>
           <div className="grid grid-cols-2 gap-2">
             {PAYMENT_METHODS.map((method, idx) => {
@@ -496,7 +513,7 @@ function PdvPage() {
                 <button
                   key={method}
                   type="button"
-                  title={`Atalho: Alt+${idx + 1}`}
+                  title={t("Atalho: Alt+{n}", { n: idx + 1 })}
                   onClick={() => setPayment(method)}
                   className={cn(
                     "flex items-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
@@ -506,9 +523,9 @@ function PdvPage() {
                   )}
                 >
                   <Icon className="size-4" />
-                  {PAYMENT_LABEL[method]}
+                  {t(PAYMENT_LABEL[method] ?? method)}
                   <kbd className="ml-auto rounded border border-border px-1 text-[10px] text-muted-foreground">
-                    Alt+{idx + 1}
+                    {t("Alt+{n}", { n: idx + 1 })}
                   </kbd>
                 </button>
               );
@@ -519,8 +536,8 @@ function PdvPage() {
 
         <div className="space-y-2">
           <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Nome do comprador <span className="text-destructive">*</span>{" "}
-            <kbd className="rounded border border-border px-1 text-[10px] normal-case">Alt+C</kbd>
+            {t("Nome do comprador")} <span className="text-destructive">*</span>{" "}
+            <kbd className="rounded border border-border px-1 text-[10px] normal-case">{t("Alt+C")}</kbd>
           </Label>
           <Input
             id="customer"
@@ -531,29 +548,29 @@ function PdvPage() {
             aria-invalid={!customer.trim()}
             value={customer}
             onChange={(e) => setCustomer(e.target.value)}
-            placeholder="Quem vai retirar os produtos"
+            placeholder={t("Quem vai retirar os produtos")}
             className={cn("h-11", !customer.trim() && "border-destructive/60")}
           />
           {!customer.trim() && (
-            <p className="text-xs text-destructive">Obrigatório informar o comprador.</p>
+            <p className="text-xs text-destructive">{t("Obrigatório informar o comprador.")}</p>
           )}
         </div>
 
         {payment === "dinheiro" && (
           <div className="space-y-2 rounded-lg border border-border p-3">
             <Label htmlFor="received" className="text-xs uppercase tracking-widest text-muted-foreground">
-              Valor recebido
+              {t("Valor recebido")}
             </Label>
             <Input
               id="received"
               inputMode="decimal"
               value={received}
               onChange={(e) => setReceived(e.target.value)}
-              placeholder="0,00"
+              placeholder={t("0,00")}
               className="tabular h-11 text-lg"
             />
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Troco</span>
+              <span className="text-muted-foreground">{t("Troco")}</span>
               <span className={cn("tabular font-semibold", change < 0 && "text-destructive")}>
                 {brl(Math.max(change, 0))}
               </span>
@@ -569,16 +586,17 @@ function PdvPage() {
           }
           onClick={finalize}
         >
-          {mutation.isPending ? "Finalizando..." : "Finalizar venda (Alt+F)"}
+          {mutation.isPending ? t("Finalizando...") : t("Finalizar venda (Alt+F)")}
         </Button>
 
         <Button variant="outline" className="h-11" onClick={newSale}>
-          Nova venda (Alt+N)
+          {t("Nova venda (Alt+N)")}
         </Button>
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Atalhos: Alt+1 Crédito · Alt+2 Débito · Alt+3 Pix · Alt+4 Dinheiro · Alt+B leitor ·
-          Alt+C comprador · Alt+F finalizar · Alt+N nova venda
+          {t(
+            "Atalhos: Alt+1 Crédito · Alt+2 Débito · Alt+3 Pix · Alt+4 Dinheiro · Alt+B leitor · Alt+C comprador · Alt+F finalizar · Alt+N nova venda",
+          )}
         </p>
 
         </div>
@@ -588,20 +606,21 @@ function PdvPage() {
 }
 
 function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
+  const t = useT();
   return (
     <div className="rounded-xl border border-accent/50 bg-accent/10 p-4">
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-semibold text-accent">
-          <CheckCircle2 className="size-5" /> Venda registrada
+          <CheckCircle2 className="size-5" /> {t("Venda registrada")}
         </h2>
         <Button size="sm" variant="outline" onClick={onNew}>
-          Nova venda
+          {t("Nova venda")}
         </Button>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        Comprador: <span className="font-semibold text-foreground">{sale.customer_name}</span> ·
-        Operador: <span className="font-semibold text-foreground">{sale.operator_name || "—"}</span> ·
-        retirada na expedição
+        {t("Comprador")}: <span className="font-semibold text-foreground">{sale.customer_name}</span> ·{" "}
+        {t("Operador")}: <span className="font-semibold text-foreground">{sale.operator_name || "—"}</span> ·{" "}
+        {t("retirada na expedição")}
       </p>
       <ul className="mt-3 space-y-1 text-sm">
         {sale.items.map((item) => (
@@ -616,17 +635,17 @@ function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
       <div className="mt-3 border-t border-border pt-3 text-sm">
         {sale.discount > 0 && (
           <div className="flex justify-between text-muted-foreground">
-            <span>Desconto</span>
+            <span>{t("Desconto")}</span>
             <span className="tabular">-{brl(sale.discount)}</span>
           </div>
         )}
         <div className="flex justify-between font-semibold">
-          <span>Total · {PAYMENT_LABEL[sale.payment_method]}</span>
+          <span>{t("Total")} · {t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)}</span>
           <span className="tabular">{brl(sale.total)}</span>
         </div>
         {sale.payment_method === "dinheiro" && sale.amount_received != null && (
           <div className="flex justify-between text-muted-foreground">
-            <span>Recebido {brl(sale.amount_received)} · Troco</span>
+            <span>{t("Recebido {value} · Troco", { value: brl(sale.amount_received) })}</span>
             <span className="tabular">{brl(sale.change_amount)}</span>
           </div>
         )}

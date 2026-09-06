@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Boxes, Pencil, Plus, Minus, Trash2, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { exportToExcel, SortableTh, useSort } from "@/lib/table-tools";
+import { useT } from "@/i18n";
 
 import {
   adjustStock,
@@ -77,6 +78,7 @@ const emptyForm: FormState = {
 };
 
 function InventarioPage() {
+  const t = useT();
   const { data: products } = useSuspenseQuery(productsQuery);
   const queryClient = useQueryClient();
   const saveFn = useServerFn(saveProduct);
@@ -96,7 +98,7 @@ function InventarioPage() {
     onSuccess: () => {
       invalidate();
       setOpen(false);
-      toast.success("Produto salvo");
+      toast.success(t("Produto salvo"));
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -105,7 +107,7 @@ function InventarioPage() {
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
       invalidate();
-      toast.success("Produto excluído");
+      toast.success(t("Produto excluído"));
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -128,21 +130,21 @@ function InventarioPage() {
     barcode: (p) => p.barcode,
     price: (p) => p.price,
     stock: (p) => p.stock,
-    active: (p) => (p.active ? "Ativo" : "Inativo"),
+    active: (p) => (p.active ? t("Ativo") : t("Inativo")),
   });
 
   function exportXlsx() {
     void exportToExcel(
       "inventario",
-      "Inventário",
+      t("Inventário"),
       rows.map((p) => ({
-        Produto: p.name,
-        Código: p.barcode,
-        Preço: p.price,
-        Estoque: p.stock,
-        "Estoque mínimo": p.min_stock,
-        Status: p.active ? "Ativo" : "Inativo",
-        "Valor total": p.stock * p.price,
+        [t("Produto")]: p.name,
+        [t("Código")]: p.barcode,
+        [t("Preço")]: p.price,
+        [t("Estoque")]: p.stock,
+        [t("Estoque mínimo")]: p.min_stock,
+        [t("Status")]: p.active ? t("Ativo") : t("Inativo"),
+        [t("Valor total")]: p.stock * p.price,
       })),
     );
   }
@@ -187,25 +189,25 @@ function InventarioPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Boxes className="size-6 text-primary" /> Inventário
+            <Boxes className="size-6 text-primary" /> {t("Inventário")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {products.length} produtos cadastrados
-            {lowStock > 0 && ` · ${lowStock} com estoque baixo`}
+            {t("{count} produtos cadastrados", { count: products.length })}
+            {lowStock > 0 && ` · ${t("{count} com estoque baixo", { count: lowStock })}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou código"
+            placeholder={t("Buscar por nome ou código")}
             className="w-64"
           />
           <Button variant="outline" onClick={exportXlsx}>
-            <FileSpreadsheet className="size-4" /> Exportar Excel
+            <FileSpreadsheet className="size-4" /> {t("Exportar Excel")}
           </Button>
           <Button onClick={openNew}>
-            <Plus className="size-4" /> Novo produto
+            <Plus className="size-4" /> {t("Novo produto")}
           </Button>
         </div>
       </div>
@@ -214,12 +216,12 @@ function InventarioPage() {
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
-              <SortableTh label="Produto" sortKey="name" sort={sort} onToggle={toggle} />
-              <SortableTh label="Código" sortKey="barcode" sort={sort} onToggle={toggle} />
-              <SortableTh label="Preço" sortKey="price" sort={sort} onToggle={toggle} align="right" />
-              <SortableTh label="Estoque" sortKey="stock" sort={sort} onToggle={toggle} align="center" />
-              <SortableTh label="Status" sortKey="active" sort={sort} onToggle={toggle} align="center" />
-              <th className="px-4 py-3 text-right">Ações</th>
+              <SortableTh label={t("Produto")} sortKey="name" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Código")} sortKey="barcode" sort={sort} onToggle={toggle} />
+              <SortableTh label={t("Preço")} sortKey="price" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label={t("Estoque")} sortKey="stock" sort={sort} onToggle={toggle} align="center" />
+              <SortableTh label={t("Status")} sortKey="active" sort={sort} onToggle={toggle} align="center" />
+              <th className="px-4 py-3 text-right">{t("Ações")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -237,7 +239,7 @@ function InventarioPage() {
                         size="icon"
                         className="size-7"
                         onClick={() => adjustMutation.mutate({ product_id: p.id, delta: -1 })}
-                        aria-label="Remover uma unidade"
+                        aria-label={t("Remover uma unidade")}
                       >
                         <Minus className="size-3" />
                       </Button>
@@ -255,7 +257,7 @@ function InventarioPage() {
                         size="icon"
                         className="size-7"
                         onClick={() => adjustMutation.mutate({ product_id: p.id, delta: 1 })}
-                        aria-label="Adicionar uma unidade"
+                        aria-label={t("Adicionar uma unidade")}
                       >
                         <Plus className="size-3" />
                       </Button>
@@ -270,7 +272,7 @@ function InventarioPage() {
                           : "bg-muted text-muted-foreground",
                       )}
                     >
-                      {p.active ? "Ativo" : "Inativo"}
+                      {p.active ? t("Ativo") : t("Inativo")}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -294,7 +296,7 @@ function InventarioPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                  Nenhum produto encontrado.
+                  {t("Nenhum produto encontrado.")}
                 </td>
               </tr>
             )}
@@ -306,15 +308,15 @@ function InventarioPage() {
         <DialogContent>
           <form onSubmit={submit}>
             <DialogHeader>
-              <DialogTitle>{form.id ? "Editar produto" : "Novo produto"}</DialogTitle>
+              <DialogTitle>{form.id ? t("Editar produto") : t("Novo produto")}</DialogTitle>
               <DialogDescription>
-                O código de barras é usado pelo leitor na tela de venda.
+                {t("O código de barras é usado pelo leitor na tela de venda.")}
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Nome</Label>
+                <Label htmlFor="name">{t("Nome")}</Label>
                 <Input
                   id="name"
                   required
@@ -323,7 +325,7 @@ function InventarioPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="barcode">Código de barras</Label>
+                <Label htmlFor="barcode">{t("Código de barras")}</Label>
                 <Input
                   id="barcode"
                   required
@@ -334,7 +336,7 @@ function InventarioPage() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="grid gap-2">
-                  <Label htmlFor="price">Preço (R$)</Label>
+                  <Label htmlFor="price">{t("Preço (R$)")}</Label>
                   <Input
                     id="price"
                     inputMode="decimal"
@@ -344,7 +346,7 @@ function InventarioPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="stock">Estoque</Label>
+                  <Label htmlFor="stock">{t("Estoque")}</Label>
                   <Input
                     id="stock"
                     inputMode="numeric"
@@ -354,7 +356,7 @@ function InventarioPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="min_stock">Estoque mín.</Label>
+                  <Label htmlFor="min_stock">{t("Estoque mín.")}</Label>
                   <Input
                     id="min_stock"
                     inputMode="numeric"
@@ -370,16 +372,16 @@ function InventarioPage() {
                   checked={form.active}
                   onCheckedChange={(v) => setForm({ ...form, active: v })}
                 />
-                <Label htmlFor="active">Produto ativo para venda</Label>
+                <Label htmlFor="active">{t("Produto ativo para venda")}</Label>
               </div>
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancelar
+                {t("Cancelar")}
               </Button>
               <Button type="submit" disabled={saveMutation.isPending}>
-                Salvar
+                {t("Salvar")}
               </Button>
             </DialogFooter>
           </form>

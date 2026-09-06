@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 
 const operatorsQuery = queryOptions({
   queryKey: ["operators"],
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/operadores")({
 });
 
 function OperadoresPage() {
+  const t = useT();
   const { data: operators } = useSuspenseQuery(operatorsQuery);
   const queryClient = useQueryClient();
   const saveFn = useServerFn(saveOperator);
@@ -67,7 +69,7 @@ function OperadoresPage() {
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
       refresh();
-      toast.success("Operador excluído");
+      toast.success(t("Operador excluído"));
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -75,7 +77,7 @@ function OperadoresPage() {
   const commitEdit = (op: { id: string; name: string; active: boolean }) => {
     const trimmed = editingName.trim();
     if (!trimmed) {
-      toast.error("Informe o nome do operador");
+      toast.error(t("Informe o nome do operador"));
       return;
     }
     if (trimmed === op.name) {
@@ -87,7 +89,7 @@ function OperadoresPage() {
       {
         onSuccess: () => {
           setEditingId(null);
-          toast.success("Nome atualizado");
+          toast.success(t("Nome atualizado"));
         },
       },
     );
@@ -97,10 +99,10 @@ function OperadoresPage() {
   return (
     <main className="mx-auto max-w-3xl p-4">
       <h1 className="flex items-center gap-2 text-2xl font-bold">
-        <Users className="size-6 text-primary" /> Operadores
+        <Users className="size-6 text-primary" /> {t("Operadores")}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Cada venda é registrada com o operador que realizou o atendimento.
+        {t("Cada venda é registrada com o operador que realizou o atendimento.")}
       </p>
 
       <form
@@ -108,7 +110,7 @@ function OperadoresPage() {
         onSubmit={(e) => {
           e.preventDefault();
           if (!name.trim()) {
-            toast.error("Informe o nome do operador");
+            toast.error(t("Informe o nome do operador"));
             return;
           }
           save.mutate({ name: name.trim(), active: true });
@@ -116,17 +118,17 @@ function OperadoresPage() {
       >
         <div className="grid flex-1 gap-1.5">
           <Label htmlFor="name" className="text-xs uppercase tracking-widest text-muted-foreground">
-            Novo operador
+            {t("Novo operador")}
           </Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Nome do operador"
+            placeholder={t("Nome do operador")}
           />
         </div>
         <Button type="submit" disabled={save.isPending}>
-          Adicionar
+          {t("Adicionar")}
         </Button>
       </form>
 
@@ -144,13 +146,13 @@ function OperadoresPage() {
                     if (e.key === "Escape") setEditingId(null);
                   }}
                   className="flex-1"
-                  aria-label={`Editar nome de ${op.name}`}
+                  aria-label={t("Editar nome de {name}", { name: op.name })}
                 />
                 <Button size="sm" disabled={save.isPending} onClick={() => commitEdit(op)}>
-                  Salvar
+                  {t("Salvar")}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
-                  Cancelar
+                  {t("Cancelar")}
                 </Button>
               </>
             ) : (
@@ -162,20 +164,20 @@ function OperadoresPage() {
                     op.active ? "bg-accent/15 text-accent" : "bg-secondary text-muted-foreground",
                   )}
                 >
-                  {op.active ? "Ativo" : "Inativo"}
+                  {op.active ? t("Ativo") : t("Inativo")}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => save.mutate({ id: op.id, name: op.name, active: !op.active })}
                 >
-                  {op.active ? "Desativar" : "Ativar"}
+                  {op.active ? t("Desativar") : t("Ativar")}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="size-8 text-muted-foreground hover:text-foreground"
-                  aria-label={`Editar ${op.name}`}
+                  aria-label={t("Editar {name}", { name: op.name })}
                   onClick={() => {
                     setEditingId(op.id);
                     setEditingName(op.name);
@@ -187,7 +189,7 @@ function OperadoresPage() {
                   variant="ghost"
                   size="icon"
                   className="size-8 text-muted-foreground hover:text-destructive"
-                  aria-label={`Excluir ${op.name}`}
+                  aria-label={t("Excluir {name}", { name: op.name })}
                   onClick={() => remove.mutate(op.id)}
                 >
                   <Trash2 className="size-4" />
@@ -199,7 +201,7 @@ function OperadoresPage() {
         ))}
         {operators.length === 0 && (
           <li className="px-4 py-12 text-center text-muted-foreground">
-            Nenhum operador cadastrado ainda.
+            {t("Nenhum operador cadastrado ainda.")}
           </li>
         )}
       </ul>
