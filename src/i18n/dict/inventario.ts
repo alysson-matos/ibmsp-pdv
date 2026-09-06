@@ -1,1 +1,20 @@
-export const INVENTARIO: Record<string, string> = {};
+export const INVENTARIO: Record<string, string> = {
+  "Produto salvo": "Product saved",
+  "Produto excluído": "Product deleted",
+  "Inventário": "Inventory",
+  "Estoque mínimo": "Minimum stock",
+  "Valor total": "Total value",
+  "{count} produtos cadastrados": "{count} registered products",
+  "{count} com estoque baixo": "{count} low on stock",
+  "Buscar por nome ou código": "Search by name or code",
+  "Novo produto": "New product",
+  "Remover uma unidade": "Remove one unit",
+  "Adicionar uma unidade": "Add one unit",
+  "Nenhum produto encontrado.": "No products found.",
+  "Editar produto": "Edit product",
+  "O código de barras é usado pelo leitor na tela de venda.":
+    "The barcode is used by the scanner on the sales screen.",
+  "Preço (R$)": "Price (R$)",
+  "Estoque mín.": "Min. stock",
+  "Produto ativo para venda": "Active product for sale",
+};
