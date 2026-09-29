@@ -42,7 +42,6 @@ export type Database = {
         Row: {
           active: boolean
           barcode: string
-          cost: number
           created_at: string
           id: string
           min_stock: number
@@ -54,7 +53,6 @@ export type Database = {
         Insert: {
           active?: boolean
           barcode: string
-          cost?: number
           created_at?: string
           id?: string
           min_stock?: number
@@ -66,7 +64,6 @@ export type Database = {
         Update: {
           active?: boolean
           barcode?: string
-          cost?: number
           created_at?: string
           id?: string
           min_stock?: number
@@ -87,7 +84,6 @@ export type Database = {
           quantity: number
           sale_id: string
           subtotal: number
-          unit_cost: number | null
           unit_price: number
         }
         Insert: {
@@ -99,7 +95,6 @@ export type Database = {
           quantity: number
           sale_id: string
           subtotal: number
-          unit_cost?: number | null
           unit_price: number
         }
         Update: {
@@ -111,7 +106,6 @@ export type Database = {
           quantity?: number
           sale_id?: string
           subtotal?: number
-          unit_cost?: number | null
           unit_price?: number
         }
         Relationships: [
