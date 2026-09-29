@@ -52,7 +52,6 @@ export const Route = createFileRoute("/inventario")({
   }),
   errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
-  loader: ({ context }) => context.queryClient.prefetchQuery(productsQuery),
   component: InventarioPage,
 });
 

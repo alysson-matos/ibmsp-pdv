@@ -42,7 +42,6 @@ export const Route = createFileRoute("/expedicao")({
   }),
   errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
-  loader: ({ context }) => context.queryClient.prefetchQuery(shippingQuery),
   component: ExpedicaoPage,
 });
 

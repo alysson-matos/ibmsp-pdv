@@ -70,11 +70,6 @@ export const Route = createFileRoute("/")({
 
   errorComponent: RouteError,
   notFoundComponent: NotFound,
-  loader: ({ context }) =>
-    Promise.all([
-      context.queryClient.prefetchQuery(productsQuery),
-      context.queryClient.prefetchQuery(operatorsQuery),
-    ]),
   component: PdvPage,
 });
 

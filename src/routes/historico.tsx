@@ -68,7 +68,6 @@ export const Route = createFileRoute("/historico")({
   }),
   errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
-  loader: ({ context }) => context.queryClient.prefetchQuery(operatorsQuery),
   component: HistoricoPage,
 });
 
