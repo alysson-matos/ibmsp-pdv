@@ -118,11 +118,28 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
   const router = useRouter();
+  const expired = error?.message?.includes("Sessão expirada");
   useEffect(() => {
+    if (expired) {
+      // Session timed out: drop cached data and reload the role so the
+      // password screen appears instead of an error page.
+      router.options.context.queryClient?.clear();
+      router.invalidate().finally(() => reset());
+      return;
+    }
+    console.error(error);
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+  }, [error, expired, router, reset]);
+
+  if (expired) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
