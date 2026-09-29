@@ -5,6 +5,7 @@ import { ReceiptText, ChevronDown, Boxes, PackageSearch, FileSpreadsheet } from 
 import { exportToExcel, SortableTh, useSort } from "@/lib/table-tools";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
+import { RouteError } from "@/components/route-error";
 
 import {
   listOperators,
@@ -65,11 +66,7 @@ export const Route = createFileRoute("/historico")({
       },
     ],
   }),
-  errorComponent: ({ error }) => (
-    <div role="alert" className="p-8 text-destructive">
-      {error.message}
-    </div>
-  ),
+  errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
   loader: ({ context }) => context.queryClient.prefetchQuery(operatorsQuery),
   component: HistoricoPage,

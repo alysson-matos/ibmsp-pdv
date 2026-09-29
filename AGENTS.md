@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Route-level data errors use the shared session-aware boundary so an expired gate returns to unlock instead of blanking a child route.

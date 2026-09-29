@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
+import { RouteError } from "@/components/route-error";
 
 const shippingQuery = queryOptions({
   queryKey: ["shipping"],
@@ -39,11 +40,7 @@ export const Route = createFileRoute("/expedicao")({
       },
     ],
   }),
-  errorComponent: ({ error }) => (
-    <div role="alert" className="p-8 text-destructive">
-      {error.message}
-    </div>
-  ),
+  errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
   loader: ({ context }) => context.queryClient.prefetchQuery(shippingQuery),
   component: ExpedicaoPage,

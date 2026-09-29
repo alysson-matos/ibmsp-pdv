@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
+import { RouteError } from "@/components/route-error";
 
 const operatorsQuery = queryOptions({
   queryKey: ["operators"],
@@ -35,11 +36,7 @@ export const Route = createFileRoute("/operadores")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  errorComponent: ({ error }) => (
-    <div role="alert" className="p-8 text-destructive">
-      {error.message}
-    </div>
-  ),
+  errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
   loader: ({ context }) => context.queryClient.prefetchQuery(operatorsQuery),
   component: OperadoresPage,

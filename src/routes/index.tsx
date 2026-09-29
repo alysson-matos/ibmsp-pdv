@@ -32,6 +32,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { useT } from "@/i18n";
+import { RouteError } from "@/components/route-error";
 
 
 const productsQuery = queryOptions({
@@ -67,11 +68,7 @@ export const Route = createFileRoute("/")({
     links: [{ rel: "canonical", href: "https://ibmsp-pdv.lovable.app/" }],
   }),
 
-  errorComponent: ({ error }) => (
-    <div role="alert" className="p-8 text-destructive">
-      {error.message}
-    </div>
-  ),
+  errorComponent: RouteError,
   notFoundComponent: NotFound,
   loader: ({ context }) =>
     Promise.all([
