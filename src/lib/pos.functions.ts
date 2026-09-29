@@ -207,16 +207,32 @@ export const checkout = createServerFn({ method: "POST" })
 
 export const listShipping = createServerFn({ method: "GET" }).handler(async (): Promise<Sale[]> => {
   const { getServerSupabase } = await import("./pos.server");
-  const { data, error } = await (await getServerSupabase("any"))
-    .from("sales")
-    .select(
-      "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
-    )
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const supabase = await getServerSupabase("any");
+  const columns =
+    "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)";
 
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => mapSale(row as unknown as Record<string, unknown>));
+  // Open orders are always fetched in full so old ones never drop out of the queue;
+  // delivered ones are only the most recent, to allow reopening by mistake.
+  const [open, delivered] = await Promise.all([
+    supabase
+      .from("sales")
+      .select(columns)
+      .neq("status", "entregue")
+      .order("created_at", { ascending: true })
+      .limit(1000),
+    supabase
+      .from("sales")
+      .select(columns)
+      .eq("status", "entregue")
+      .order("delivered_at", { ascending: false })
+      .limit(30),
+  ]);
+
+  if (open.error) throw new Error(open.error.message);
+  if (delivered.error) throw new Error(delivered.error.message);
+  return [...(open.data ?? []), ...(delivered.data ?? [])].map((row) =>
+    mapSale(row as unknown as Record<string, unknown>),
+  );
 });
 
 export const setSaleStatus = createServerFn({ method: "POST" })

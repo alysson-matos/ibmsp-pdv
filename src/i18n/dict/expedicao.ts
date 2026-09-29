@@ -15,4 +15,9 @@ export const EXPEDICAO: Record<string, string> = {
   "{pendentes} compra(s) a separar · {separados} pronta(s) para retirada":
     "{pendentes} order(s) to pack · {separados} ready for pickup",
   "Compra marcada como {status}": "Order marked as {status}",
+  SEPARAR: "PACK",
+  ENTREGAR: "DELIVER",
+  "Entregar agora": "Deliver now",
+  "Entregues recentes": "Recently delivered",
+  "Fila vazia": "Queue is empty",
 };

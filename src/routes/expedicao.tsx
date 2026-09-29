@@ -1,9 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 import { toast } from "sonner";
-import { PackageCheck, PackageSearch, Undo2, User } from "lucide-react";
+import {
+  ChevronDown,
+  PackageCheck,
+  PackageOpen,
+  PackageSearch,
+  Truck,
+  Undo2,
+  User,
+} from "lucide-react";
 
 import {
   listShipping,
@@ -36,7 +44,8 @@ export const Route = createFileRoute("/expedicao")({
       { property: "og:title", content: "Expedição — Separação e entrega das compras" },
       {
         property: "og:description",
-        content: "Separe os produtos de cada compra e marque como entregue na retirada do comprador.",
+        content:
+          "Separe os produtos de cada compra e marque como entregue na retirada do comprador.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -47,20 +56,17 @@ export const Route = createFileRoute("/expedicao")({
   component: ExpedicaoPage,
 });
 
-function useFilters(t: (s: string, vars?: Record<string, string | number>) => string): { key: SaleStatus | "abertas"; label: string }[] {
-  return [
-    { key: "abertas", label: t("Em aberto") },
-    { key: "pendente", label: t("A separar") },
-    { key: "separado", label: t("Separado") },
-    { key: "entregue", label: t("Entregues") },
-  ];
-}
+const byOldest = (a: Sale, b: Sale) => a.created_at.localeCompare(b.created_at);
 
-const statusStyle: Record<SaleStatus, string> = {
-  pendente: "border-primary/50 bg-primary/15 text-primary",
-  separado: "border-accent/50 bg-accent/15 text-accent",
-  entregue: "border-border bg-secondary text-muted-foreground",
-};
+function matches(sale: Sale, term: string) {
+  if (!term) return true;
+  return (
+    sale.customer_name.toLowerCase().includes(term) ||
+    sale.items.some(
+      (i) => i.product_name.toLowerCase().includes(term) || (i.barcode ?? "").includes(term),
+    )
+  );
+}
 
 function ExpedicaoPage() {
   const t = useT();
@@ -68,47 +74,67 @@ function ExpedicaoPage() {
   const queryClient = useQueryClient();
   const updateFn = useServerFn(setSaleStatus);
 
-  const [filter, setFilter] = useState<SaleStatus | "abertas">("abertas");
   const [search, setSearch] = useState("");
-  const FILTERS = useFilters(t);
+  const [showDelivered, setShowDelivered] = useState(false);
 
+  // Moves the card to its new queue immediately; the list is reloaded from the
+  // server once the last pending change finishes.
   const mutation = useMutation({
+    mutationKey: ["sale-status"],
     mutationFn: (vars: { id: string; status: SaleStatus }) => updateFn({ data: vars }),
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: ["shipping"] });
+      queryClient.setQueryData<Sale[]>(["shipping"], (old) =>
+        old?.map((s) =>
+          s.id === vars.id
+            ? {
+                ...s,
+                status: vars.status,
+                delivered_at: vars.status === "entregue" ? new Date().toISOString() : null,
+              }
+            : s,
+        ),
+      );
+    },
     onSuccess: (_r, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["shipping"] });
-      queryClient.invalidateQueries({ queryKey: ["sales"] });
-      toast.success(t("Compra marcada como {status}", { status: t(SALE_STATUS_LABEL[vars.status]).toLowerCase() }));
+      toast.success(
+        t("Compra marcada como {status}", {
+          status: t(SALE_STATUS_LABEL[vars.status]).toLowerCase(),
+        }),
+      );
     },
     onError: (error: Error) => toast.error(error.message),
+    onSettled: () => {
+      if (queryClient.isMutating({ mutationKey: ["sale-status"] }) === 1) {
+        queryClient.invalidateQueries({ queryKey: ["shipping"] });
+        queryClient.invalidateQueries({ queryKey: ["sales"] });
+      }
+    },
   });
+  const move = (id: string, status: SaleStatus) => mutation.mutate({ id, status });
 
-  const filtered = useMemo(() => {
+  const { toPack, toDeliver, delivered } = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return sales.filter((sale) => {
-      const byStatus =
-        filter === "abertas" ? sale.status !== "entregue" : sale.status === filter;
-      if (!byStatus) return false;
-      if (!term) return true;
-      return (
-        sale.customer_name.toLowerCase().includes(term) ||
-        sale.items.some(
-          (i) =>
-            i.product_name.toLowerCase().includes(term) || (i.barcode ?? "").includes(term),
-        )
-      );
-    });
-  }, [sales, filter, search]);
-
-  const pendentes = sales.filter((s) => s.status === "pendente").length;
-  const separados = sales.filter((s) => s.status === "separado").length;
+    const visible = sales.filter((s) => matches(s, term));
+    return {
+      toPack: visible.filter((s) => s.status === "pendente").sort(byOldest),
+      toDeliver: visible.filter((s) => s.status === "separado").sort(byOldest),
+      delivered: visible
+        .filter((s) => s.status === "entregue")
+        .sort((a, b) => (b.delivered_at ?? "").localeCompare(a.delivered_at ?? "")),
+    };
+  }, [sales, search]);
 
   return (
-    <main className="mx-auto max-w-[1200px] space-y-4 p-4">
+    <main className="mx-auto max-w-[1600px] space-y-4 p-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">{t("Expedição")}</h1>
           <p className="text-sm text-muted-foreground">
-            {t("{pendentes} compra(s) a separar · {separados} pronta(s) para retirada", { pendentes, separados })}
+            {t("{pendentes} compra(s) a separar · {separados} pronta(s) para retirada", {
+              pendentes: toPack.length,
+              separados: toDeliver.length,
+            })}
           </p>
         </div>
         <Input
@@ -119,79 +145,176 @@ function ExpedicaoPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            onClick={() => setFilter(f.key)}
-            className={cn(
-              "rounded-full border px-4 py-1.5 text-sm transition-colors",
-              filter === f.key
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <QueueColumn
+          title={t("SEPARAR")}
+          icon={PackageOpen}
+          tone="primary"
+          sales={toPack}
+          renderActions={(sale) => (
+            <>
+              <Button className="flex-1" onClick={() => move(sale.id, "separado")}>
+                <PackageSearch className="size-4" /> {t("Marcar separado")}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => move(sale.id, "entregue")}>
+                {t("Entregar agora")}
+              </Button>
+            </>
+          )}
+        />
+        <QueueColumn
+          title={t("ENTREGAR")}
+          icon={Truck}
+          tone="accent"
+          sales={toDeliver}
+          renderActions={(sale) => (
+            <>
+              <Button className="flex-1" onClick={() => move(sale.id, "entregue")}>
+                <PackageCheck className="size-4" /> {t("Marcar entregue")}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => move(sale.id, "pendente")}>
+                <Undo2 className="size-4" /> {t("Voltar")}
+              </Button>
+            </>
+          )}
+        />
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="grid place-items-center gap-2 rounded-xl border border-border bg-card px-4 py-20 text-center text-muted-foreground">
-          <PackageSearch className="size-10 opacity-40" />
-          <p className="text-sm">{t("Nenhuma compra nesta lista.")}</p>
-        </div>
-      ) : (
-        <ul className="grid gap-3 md:grid-cols-2">
-          {filtered.map((sale) => (
-            <li key={sale.id}>
-              <ShippingCard
-                sale={sale}
-                busy={mutation.isPending}
-                onChange={(status) => mutation.mutate({ id: sale.id, status })}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+      <section className="rounded-xl border border-border bg-card">
+        <button
+          type="button"
+          onClick={() => setShowDelivered((v) => !v)}
+          aria-expanded={showDelivered}
+          className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <span>
+            {t("Entregues recentes")} ({delivered.length})
+          </span>
+          <ChevronDown
+            className={cn("size-4 transition-transform", showDelivered && "rotate-180")}
+          />
+        </button>
+        {showDelivered && (
+          <ul className="divide-y divide-border border-t border-border">
+            {delivered.length === 0 && (
+              <li className="px-4 py-6 text-center text-sm text-muted-foreground">
+                {t("Nenhuma compra nesta lista.")}
+              </li>
+            )}
+            {delivered.map((sale) => (
+              <li key={sale.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
+                <span className="font-medium">{sale.customer_name || t("Sem nome")}</span>
+                <span className="tabular text-xs text-muted-foreground">
+                  {t("Entregue {date}", {
+                    date: sale.delivered_at ? dateTime(sale.delivered_at) : "",
+                  })}{" "}
+                  · {brl(sale.total)}
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-auto"
+                  onClick={() => move(sale.id, "pendente")}
+                >
+                  <Undo2 className="size-4" /> {t("Reabrir")}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
 
-function ShippingCard({
+const toneStyle = {
+  primary: { bar: "border-t-primary", icon: "text-primary", badge: "bg-primary/15 text-primary" },
+  accent: { bar: "border-t-accent", icon: "text-accent", badge: "bg-accent/15 text-accent" },
+} as const;
+
+function QueueColumn({
+  title,
+  icon: Icon,
+  tone,
+  sales,
+  renderActions,
+}: {
+  title: string;
+  icon: ComponentType<{ className?: string }>;
+  tone: keyof typeof toneStyle;
+  sales: Sale[];
+  renderActions: (sale: Sale) => React.ReactNode;
+}) {
+  const t = useT();
+  const style = toneStyle[tone];
+  return (
+    <section
+      className={cn(
+        "flex flex-col rounded-xl border border-t-4 border-border bg-secondary/30",
+        style.bar,
+      )}
+    >
+      <header className="flex items-center gap-2 px-4 py-3">
+        <Icon className={cn("size-5", style.icon)} />
+        <h2 className="text-sm font-bold tracking-widest">{title}</h2>
+        <span
+          className={cn(
+            "tabular ml-auto rounded-full px-2.5 py-0.5 text-xs font-semibold",
+            style.badge,
+          )}
+        >
+          {sales.length}
+        </span>
+      </header>
+      {sales.length === 0 ? (
+        <div className="grid place-items-center gap-2 px-4 pb-10 pt-6 text-center text-muted-foreground">
+          <PackageSearch className="size-8 opacity-40" />
+          <p className="text-sm">{t("Fila vazia")}</p>
+        </div>
+      ) : (
+        <ol className="space-y-3 px-3 pb-3">
+          {sales.map((sale, index) => (
+            <li key={sale.id}>
+              <QueueCard sale={sale} position={index + 1}>
+                {renderActions(sale)}
+              </QueueCard>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function QueueCard({
   sale,
-  busy,
-  onChange,
+  position,
+  children,
 }: {
   sale: Sale;
-  busy: boolean;
-  onChange: (status: SaleStatus) => void;
+  position: number;
+  children: React.ReactNode;
 }) {
   const t = useT();
   return (
-    <article className="flex h-full flex-col rounded-xl border border-border bg-card p-4 shadow-lg">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+    <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
+      <div className="flex items-start gap-3">
+        <span className="tabular grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-xs font-bold text-muted-foreground">
+          {position}
+        </span>
+        <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 truncate text-base font-semibold">
             <User className="size-4 shrink-0 text-primary" />
             {sale.customer_name || t("Sem nome")}
           </p>
           <p className="tabular text-xs text-muted-foreground">
-            {dateTime(sale.created_at)} · {t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)} · {brl(sale.total)}
+            {dateTime(sale.created_at)} ·{" "}
+            {t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)} · {brl(sale.total)}
           </p>
         </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium",
-            statusStyle[sale.status],
-          )}
-        >
-          {t(SALE_STATUS_LABEL[sale.status])}
-        </span>
       </div>
 
-      <ul className="mt-3 flex-1 space-y-1.5 border-t border-border pt-3 text-sm">
+      <ul className="mt-3 space-y-1.5 border-t border-border pt-3 text-sm">
         {sale.items.map((item) => (
           <li key={item.id} className="flex items-start justify-between gap-3">
             <span className="min-w-0">
@@ -208,39 +331,7 @@ function ShippingCard({
         ))}
       </ul>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {sale.status === "pendente" && (
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => onChange("separado")}>
-            <PackageSearch className="size-4" /> {t("Marcar separado")}
-          </Button>
-        )}
-        {sale.status !== "entregue" && (
-          <Button size="sm" disabled={busy} onClick={() => onChange("entregue")}>
-            <PackageCheck className="size-4" /> {t("Marcar entregue")}
-          </Button>
-        )}
-        {sale.status === "entregue" && (
-          <>
-            <span className="text-xs text-muted-foreground">
-              {t("Entregue {date}", { date: sale.delivered_at ? dateTime(sale.delivered_at) : "" })}
-            </span>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => onChange("pendente")}
-              className="ml-auto"
-            >
-              <Undo2 className="size-4" /> {t("Reabrir")}
-            </Button>
-          </>
-        )}
-        {sale.status === "separado" && (
-          <Button size="sm" variant="ghost" disabled={busy} onClick={() => onChange("pendente")}>
-            <Undo2 className="size-4" /> {t("Voltar")}
-          </Button>
-        )}
-      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">{children}</div>
     </article>
   );
 }
