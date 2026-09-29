@@ -64,6 +64,8 @@ export const Route = createFileRoute("/historico")({
         property: "og:description",
         content: "Vendas, itens, formas de pagamento e faturamento do período em um só lugar.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   errorComponent: RouteError,

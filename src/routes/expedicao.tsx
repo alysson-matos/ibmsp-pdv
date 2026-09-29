@@ -38,6 +38,8 @@ export const Route = createFileRoute("/expedicao")({
         property: "og:description",
         content: "Separe os produtos de cada compra e marque como entregue na retirada do comprador.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   errorComponent: RouteError,

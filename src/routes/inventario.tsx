@@ -48,6 +48,8 @@ export const Route = createFileRoute("/inventario")({
         property: "og:description",
         content: "Cadastro de produtos, preços, estoque mínimo e ajustes de entrada e saída.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   errorComponent: RouteError,
