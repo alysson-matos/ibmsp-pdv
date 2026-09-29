@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { ReceiptText, ChevronDown, Boxes, PackageSearch, FileSpreadsheet } from "lucide-react";
 import { exportToExcel, SortableTh, useSort } from "@/lib/table-tools";
@@ -71,6 +71,7 @@ export const Route = createFileRoute("/historico")({
     </div>
   ),
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  loader: ({ context }) => context.queryClient.prefetchQuery(operatorsQuery),
   component: HistoricoPage,
 });
 
@@ -126,8 +127,10 @@ function SalesTab() {
     operator_id: "todos",
     tz_offset: new Date().getTimezoneOffset(),
   });
-  const { data: sales } = useSuspenseQuery(salesQuery(filters));
-  const { data: operators } = useSuspenseQuery(operatorsQuery);
+  // Fetched together so the second request doesn't wait for the first to resolve.
+  const [{ data: sales }, { data: operators }] = useSuspenseQueries({
+    queries: [salesQuery(filters), operatorsQuery],
+  });
   const [openId, setOpenId] = useState<string | null>(null);
 
   const revenue = sales.reduce((sum, s) => sum + s.total, 0);

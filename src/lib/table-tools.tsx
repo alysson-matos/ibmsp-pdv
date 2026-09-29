@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
+
+// String.localeCompare with a locale builds a new collator on every call, which makes
+// sorting large tables dozens of times slower. Reuse a single instance instead.
+const collator = new Intl.Collator("pt-BR", { numeric: true });
 
 export type SortDir = "asc" | "desc";
 export type SortValue = string | number | null | undefined;
@@ -32,7 +37,7 @@ export function useSort<T>(defaultKey: string | null = null, defaultDir: SortDir
       if (av == null) return 1;
       if (bv == null) return -1;
       if (typeof av === "number" && typeof bv === "number") return (av - bv) * factor;
-      return String(av).localeCompare(String(bv), "pt-BR", { numeric: true }) * factor;
+      return collator.compare(String(av), String(bv)) * factor;
     });
   }
 
@@ -79,6 +84,75 @@ export function SortableTh({
         <Icon className={cn("size-3.5", active ? "opacity-100" : "opacity-40")} />
       </button>
     </th>
+  );
+}
+
+/** Slices `rows` into pages. Call `reset()` when filters or sorting change. */
+export function usePagination<T>(rows: T[], pageSize = 50) {
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const current = Math.min(page, pageCount);
+  const start = (current - 1) * pageSize;
+
+  return {
+    page: current,
+    pageCount,
+    total: rows.length,
+    start,
+    pageRows: rows.slice(start, start + pageSize),
+    setPage,
+    reset: () => setPage(1),
+  };
+}
+
+export function Pagination({
+  page,
+  pageCount,
+  total,
+  start,
+  pageSize,
+  onPageChange,
+}: {
+  page: number;
+  pageCount: number;
+  total: number;
+  start: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}) {
+  const t = useT();
+  if (pageCount <= 1) return null;
+  const end = Math.min(start + pageSize, total);
+  const buttonClass =
+    "inline-flex items-center gap-1 rounded-md border border-input px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40";
+
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
+      <span className="tabular">
+        {t("{from}–{to} de {total}", { from: start + 1, to: end, total })}
+      </span>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className={buttonClass}
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft className="size-3.5" /> {t("Anterior")}
+        </button>
+        <span className="tabular">
+          {page} / {pageCount}
+        </span>
+        <button
+          type="button"
+          className={buttonClass}
+          disabled={page >= pageCount}
+          onClick={() => onPageChange(page + 1)}
+        >
+          {t("Próxima")} <ChevronRight className="size-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Boxes, Pencil, Plus, Minus, Trash2, AlertTriangle, FileSpreadsheet } from "lucide-react";
-import { exportToExcel, SortableTh, useSort } from "@/lib/table-tools";
+import { exportToExcel, Pagination, SortableTh, usePagination, useSort } from "@/lib/table-tools";
 import { useT } from "@/i18n";
 
 import {
@@ -55,6 +55,7 @@ export const Route = createFileRoute("/inventario")({
     </div>
   ),
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  loader: ({ context }) => context.queryClient.prefetchQuery(productsQuery),
   component: InventarioPage,
 });
 
@@ -67,6 +68,8 @@ type FormState = {
   min_stock: string;
   active: boolean;
 };
+
+const PAGE_SIZE = 50;
 
 const emptyForm: FormState = {
   barcode: "",
@@ -112,11 +115,25 @@ function InventarioPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Updates the stock on screen right away; the server result is reconciled once the
+  // last pending click finishes, instead of reloading the whole list on every click.
   const adjustMutation = useMutation({
+    mutationKey: ["adjust-stock"],
     mutationFn: (vars: { product_id: string; delta: number }) =>
       adjustFn({ data: { ...vars, reason: vars.delta > 0 ? "entrada" : "saida" } }),
-    onSuccess: () => invalidate(),
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: ["products"] });
+      queryClient.setQueryData<Product[]>(["products"], (old) =>
+        old?.map((p) => (p.id === vars.product_id ? { ...p, stock: p.stock + vars.delta } : p)),
+      );
+    },
     onError: (error: Error) => toast.error(error.message),
+    onSettled: () => {
+      if (queryClient.isMutating({ mutationKey: ["adjust-stock"] }) === 1) {
+        invalidate();
+        queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+      }
+    },
   });
 
   const filtered = products.filter(
@@ -132,6 +149,11 @@ function InventarioPage() {
     stock: (p) => p.stock,
     active: (p) => (p.active ? t("Ativo") : t("Inativo")),
   });
+  const pagination = usePagination(rows, PAGE_SIZE);
+  const toggleSort = (key: string) => {
+    toggle(key);
+    pagination.reset();
+  };
 
   function exportXlsx() {
     void exportToExcel(
@@ -199,7 +221,10 @@ function InventarioPage() {
         <div className="flex items-center gap-2">
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              pagination.reset();
+            }}
             placeholder={t("Buscar por nome ou código")}
             className="w-64"
           />
@@ -216,16 +241,16 @@ function InventarioPage() {
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
-              <SortableTh label={t("Produto")} sortKey="name" sort={sort} onToggle={toggle} />
-              <SortableTh label={t("Código")} sortKey="barcode" sort={sort} onToggle={toggle} />
-              <SortableTh label={t("Preço")} sortKey="price" sort={sort} onToggle={toggle} align="right" />
-              <SortableTh label={t("Estoque")} sortKey="stock" sort={sort} onToggle={toggle} align="center" />
-              <SortableTh label={t("Status")} sortKey="active" sort={sort} onToggle={toggle} align="center" />
+              <SortableTh label={t("Produto")} sortKey="name" sort={sort} onToggle={toggleSort} />
+              <SortableTh label={t("Código")} sortKey="barcode" sort={sort} onToggle={toggleSort} />
+              <SortableTh label={t("Preço")} sortKey="price" sort={sort} onToggle={toggleSort} align="right" />
+              <SortableTh label={t("Estoque")} sortKey="stock" sort={sort} onToggle={toggleSort} align="center" />
+              <SortableTh label={t("Status")} sortKey="active" sort={sort} onToggle={toggleSort} align="center" />
               <th className="px-4 py-3 text-right">{t("Ações")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {rows.map((p) => {
+            {pagination.pageRows.map((p) => {
               const low = p.stock <= p.min_stock;
               return (
                 <tr key={p.id} className="hover:bg-secondary/30">
@@ -302,6 +327,14 @@ function InventarioPage() {
             )}
           </tbody>
         </table>
+        <Pagination
+          page={pagination.page}
+          pageCount={pagination.pageCount}
+          total={pagination.total}
+          start={pagination.start}
+          pageSize={PAGE_SIZE}
+          onPageChange={pagination.setPage}
+        />
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>

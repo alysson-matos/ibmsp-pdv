@@ -41,6 +41,7 @@ export const Route = createFileRoute("/operadores")({
     </div>
   ),
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  loader: ({ context }) => context.queryClient.prefetchQuery(operatorsQuery),
   component: OperadoresPage,
 });
 

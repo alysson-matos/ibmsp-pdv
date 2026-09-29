@@ -73,6 +73,11 @@ export const Route = createFileRoute("/")({
     </div>
   ),
   notFoundComponent: NotFound,
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.prefetchQuery(productsQuery),
+      context.queryClient.prefetchQuery(operatorsQuery),
+    ]),
   component: PdvPage,
 });
 
@@ -221,6 +226,8 @@ function PdvPage() {
       setCustomer("");
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["shipping"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       toast.success(t("Venda finalizada!"));
     },
     onError: (error: Error) => toast.error(error.message),

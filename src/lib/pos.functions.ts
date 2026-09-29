@@ -139,27 +139,36 @@ export const adjustStock = createServerFn({ method: "POST" })
     const { getServerSupabase } = await import("./pos.server");
     const supabase = await getServerSupabase();
 
-    const { data: product, error: readError } = await supabase
-      .from("products")
-      .select("stock")
-      .eq("id", data.product_id)
-      .single();
-    if (readError) throw new Error(readError.message);
+    // Compare-and-swap: the update only applies if the stock is still the value we read,
+    // so concurrent adjustments (fast clicks, other terminals, checkouts) are never lost.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: product, error: readError } = await supabase
+        .from("products")
+        .select("stock")
+        .eq("id", data.product_id)
+        .single();
+      if (readError) throw new Error(readError.message);
 
-    const next = product.stock + data.delta;
-    if (next < 0) throw new Error("O estoque não pode ficar negativo");
+      const next = product.stock + data.delta;
+      if (next < 0) throw new Error("O estoque não pode ficar negativo");
 
-    const { error } = await supabase
-      .from("products")
-      .update({ stock: next })
-      .eq("id", data.product_id);
-    if (error) throw new Error(error.message);
+      const { data: updated, error } = await supabase
+        .from("products")
+        .update({ stock: next })
+        .eq("id", data.product_id)
+        .eq("stock", product.stock)
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!updated?.length) continue;
 
-    await supabase
-      .from("stock_movements")
-      .insert({ product_id: data.product_id, delta: data.delta, reason: data.reason });
+      const { error: movementError } = await supabase
+        .from("stock_movements")
+        .insert({ product_id: data.product_id, delta: data.delta, reason: data.reason });
+      if (movementError) throw new Error(movementError.message);
 
-    return { stock: next };
+      return { stock: next };
+    }
+    throw new Error("O estoque foi alterado ao mesmo tempo. Tente novamente.");
   });
 
 export const checkout = createServerFn({ method: "POST" })
