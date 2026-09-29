@@ -17,6 +17,9 @@ export const COMMON: Record<string, string> = {
   "Esta área é exclusiva do administrador. Saia e entre com a senha de admin.":
     "This area is for administrators only. Sign out and sign in with the admin password.",
   Idioma: "Language",
+  Custo: "Cost",
+  custo: "cost",
+  Lucro: "Profit",
   Anterior: "Previous",
   "Próxima": "Next",
   "{from}–{to} de {total}": "{from}–{to} of {total}",

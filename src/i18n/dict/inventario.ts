@@ -17,4 +17,9 @@ export const INVENTARIO: Record<string, string> = {
   "Preço (R$)": "Price (R$)",
   "Estoque mín.": "Min. stock",
   "Produto ativo para venda": "Active product for sale",
+  "Custo (R$)": "Cost (R$)",
+  "Informe o custo para calcular o lucro nos relatórios.":
+    "Enter the cost to calculate profit in the reports.",
+  "Lucro por unidade: {profit} ({margin}% do preço)":
+    "Profit per unit: {profit} ({margin}% of price)",
 };

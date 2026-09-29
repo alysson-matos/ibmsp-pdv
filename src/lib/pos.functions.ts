@@ -6,6 +6,7 @@ export type Product = {
   barcode: string;
   name: string;
   price: number;
+  cost: number;
   stock: number;
   min_stock: number;
   active: boolean;
@@ -16,6 +17,8 @@ export type SaleItem = {
   product_name: string;
   barcode: string | null;
   unit_price: number;
+  /** Cost at the time of sale; null for sales made before costs were recorded. */
+  unit_cost: number | null;
   quantity: number;
   subtotal: number;
 };
@@ -52,6 +55,16 @@ export type Sale = {
   items: SaleItem[];
 };
 
+/** Total cost of a sale's items, or null when any item was sold before costs were recorded. */
+export function saleCost(sale: Pick<Sale, "items">): number | null {
+  let cost = 0;
+  for (const item of sale.items) {
+    if (item.unit_cost == null) return null;
+    cost += item.unit_cost * item.quantity;
+  }
+  return cost;
+}
+
 export const PAYMENT_METHODS = ["credito", "debito", "pix", "dinheiro"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
@@ -61,7 +74,7 @@ export const listProducts = createServerFn({ method: "GET" }).handler(async (): 
   const { getServerSupabase } = await import("./pos.server");
   const { data, error } = await (await getServerSupabase("any"))
     .from("products")
-    .select("id, barcode, name, price, stock, min_stock, active")
+    .select("id, barcode, name, price, cost, stock, min_stock, active")
     .order("name", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -71,6 +84,7 @@ export const listProducts = createServerFn({ method: "GET" }).handler(async (): 
     barcode: p.barcode,
     name: p.name,
     price: num(p.price),
+    cost: num(p.cost),
     stock: p.stock,
     min_stock: p.min_stock,
     active: p.active,
@@ -82,6 +96,7 @@ const productInput = z.object({
   barcode: z.string().trim().min(1, "Informe o código de barras"),
   name: z.string().trim().min(1, "Informe o nome"),
   price: z.number().min(0),
+  cost: z.number().min(0),
   stock: z.number().int().min(0),
   min_stock: z.number().int().min(0),
   active: z.boolean(),
@@ -96,6 +111,7 @@ export const saveProduct = createServerFn({ method: "POST" })
       barcode: data.barcode,
       name: data.name,
       price: data.price,
+      cost: data.cost,
       stock: data.stock,
       min_stock: data.min_stock,
       active: data.active,
@@ -209,7 +225,7 @@ export const listShipping = createServerFn({ method: "GET" }).handler(async (): 
   const { getServerSupabase } = await import("./pos.server");
   const supabase = await getServerSupabase("any");
   const columns =
-    "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)";
+    "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, unit_cost, quantity, subtotal)";
 
   // Open orders are always fetched in full so old ones never drop out of the queue;
   // delivered ones are only the most recent, to allow reopening by mistake.
@@ -269,7 +285,7 @@ export const listSales = createServerFn({ method: "GET" })
     let query = supabase
       .from("sales")
       .select(
-        "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
+        "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, unit_cost, quantity, subtotal)",
       )
       .order("created_at", { ascending: false })
       .limit(300);
@@ -313,6 +329,7 @@ function mapSale(row: Record<string, unknown>): Sale {
       product_name: i["product_name"] as string,
       barcode: (i["barcode"] as string | null) ?? null,
       unit_price: num(i["unit_price"]),
+      unit_cost: i["unit_cost"] == null ? null : num(i["unit_cost"]),
       quantity: i["quantity"] as number,
       subtotal: num(i["subtotal"]),
     })),
@@ -326,7 +343,7 @@ async function fetchSale(
   const { data, error } = await supabase
     .from("sales")
     .select(
-      "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, quantity, subtotal)",
+      "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, unit_cost, quantity, subtotal)",
     )
     .eq("id", id)
     .single();

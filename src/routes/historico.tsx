@@ -14,6 +14,7 @@ import {
   listSales,
   listStockMovements,
   PAYMENT_METHODS,
+  saleCost,
   type PaymentMethod,
 } from "@/lib/pos.functions";
 import { brl, dateTime, PAYMENT_LABEL, todayISO } from "@/lib/format";
@@ -135,6 +136,14 @@ function SalesTab() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   const revenue = sales.reduce((sum, s) => sum + s.total, 0);
+  // Profit only counts sales whose items all have a recorded cost.
+  const profitOf = (sale: (typeof sales)[number]) => {
+    const cost = saleCost(sale);
+    return cost == null ? null : sale.total - cost;
+  };
+  const profits = sales.map(profitOf).filter((p): p is number => p != null);
+  const profit = profits.reduce((sum, p) => sum + p, 0);
+  const withoutCost = sales.length - profits.length;
   const byMethod = PAYMENT_METHODS.map((m) => ({
     method: m,
     total: sales.filter((s) => s.payment_method === m).reduce((sum, s) => sum + s.total, 0),
@@ -148,6 +157,7 @@ function SalesTab() {
     items: (s) => s.items.reduce((sum, i) => sum + i.quantity, 0),
     payment: (s) => PAYMENT_LABEL[s.payment_method] ?? s.payment_method,
     total: (s) => s.total,
+    profit: (s) => profitOf(s),
   });
 
   return (
@@ -231,15 +241,27 @@ function SalesTab() {
                 [t("Pagamento")]: t(PAYMENT_LABEL[s.payment_method] ?? s.payment_method),
                 [t("Desconto")]: s.discount,
                 [t("Total")]: s.total,
+                [t("Custo")]: saleCost(s),
+                [t("Lucro")]: profitOf(s),
               })),
             )
           }
         />
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <SummaryCard label={t("Vendas")} value={String(sales.length)} highlight />
         <SummaryCard label={t("Faturamento")} value={brl(revenue)} highlight />
+        <SummaryCard
+          label={t("Lucro")}
+          value={brl(profit)}
+          highlight
+          hint={
+            withoutCost > 0
+              ? t("{n} venda(s) sem custo não entram no cálculo", { n: withoutCost })
+              : undefined
+          }
+        />
         {byMethod.map((m) => (
           <SummaryCard key={m.method} label={t(PAYMENT_LABEL[m.method]!)} value={brl(m.total)} />
         ))}
@@ -255,6 +277,7 @@ function SalesTab() {
               <SortableTh label={t("Itens")} sortKey="items" sort={sort} onToggle={toggle} />
               <SortableTh label={t("Pagamento")} sortKey="payment" sort={sort} onToggle={toggle} />
               <SortableTh label={t("Total")} sortKey="total" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label={t("Lucro")} sortKey="profit" sort={sort} onToggle={toggle} align="right" />
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -273,6 +296,9 @@ function SalesTab() {
                   </td>
                   <td className="px-4 py-3">{t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)}</td>
                   <td className="tabular px-4 py-3 text-right font-semibold">{brl(sale.total)}</td>
+                  <td className="tabular px-4 py-3 text-right text-muted-foreground">
+                    <ProfitValue value={profitOf(sale)} />
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <ChevronDown
                       className={cn(
@@ -284,14 +310,17 @@ function SalesTab() {
                 </tr>
                 {openId === sale.id && (
                   <tr className="bg-secondary/20">
-                    <td colSpan={7} className="px-6 py-4">
+                    <td colSpan={8} className="px-6 py-4">
                       <ul className="space-y-1">
                         {sale.items.map((item) => (
                           <li key={item.id} className="flex justify-between gap-4">
                             <span>
                               {item.quantity}× {item.product_name}{" "}
                               <span className="tabular text-muted-foreground">
-                                ({brl(item.unit_price)} un.)
+                                ({brl(item.unit_price)} un.
+                                {item.unit_cost != null &&
+                                  ` · ${t("custo")} ${brl(item.unit_cost)}`}
+                                )
                               </span>
                             </span>
                             <span className="tabular">{brl(item.subtotal)}</span>
@@ -316,7 +345,7 @@ function SalesTab() {
             ))}
             {sales.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
                   {t("Nenhuma venda no período selecionado.")}
                 </td>
               </tr>
@@ -459,6 +488,7 @@ function StockReportTab() {
 
   const totalUnits = active.reduce((s, p) => s + p.stock, 0);
   const totalValue = active.reduce((s, p) => s + p.stock * p.price, 0);
+  const totalCost = active.reduce((s, p) => s + p.stock * p.cost, 0);
   const lowStock = active.filter((p) => p.stock <= p.min_stock).length;
 
   const { sort, toggle, sorted } = useSort<(typeof active)[number]>("name");
@@ -466,16 +496,19 @@ function StockReportTab() {
     name: (p) => p.name,
     barcode: (p) => p.barcode,
     price: (p) => p.price,
+    cost: (p) => p.cost,
     stock: (p) => p.stock,
     value: (p) => p.stock * p.price,
   });
 
   return (
     <>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <SummaryCard label={t("Produtos ativos")} value={String(active.length)} highlight />
         <SummaryCard label={t("Total em estoque")} value={t("{n} un.", { n: totalUnits })} highlight />
         <SummaryCard label={t("Valor do estoque")} value={brl(totalValue)} />
+        <SummaryCard label={t("Custo do estoque")} value={brl(totalCost)} />
+        <SummaryCard label={t("Lucro potencial")} value={brl(totalValue - totalCost)} />
         <SummaryCard label={t("Estoque baixo")} value={String(lowStock)} />
       </div>
 
@@ -489,6 +522,7 @@ function StockReportTab() {
                 [t("Produto")]: p.name,
                 [t("Código")]: p.barcode,
                 [t("Preço")]: p.price,
+                [t("Custo")]: p.cost,
                 [t("Estoque")]: p.stock,
                 [t("Valor total")]: p.stock * p.price,
               })),
@@ -504,6 +538,7 @@ function StockReportTab() {
               <SortableTh label={t("Produto")} sortKey="name" sort={sort} onToggle={toggle} />
               <SortableTh label={t("Código")} sortKey="barcode" sort={sort} onToggle={toggle} />
               <SortableTh label={t("Preço")} sortKey="price" sort={sort} onToggle={toggle} align="right" />
+              <SortableTh label={t("Custo")} sortKey="cost" sort={sort} onToggle={toggle} align="right" />
               <SortableTh label={t("Estoque")} sortKey="stock" sort={sort} onToggle={toggle} align="right" />
               <SortableTh label={t("Valor total")} sortKey="value" sort={sort} onToggle={toggle} align="right" />
             </tr>
@@ -514,6 +549,9 @@ function StockReportTab() {
                 <td className="px-4 py-3">{p.name}</td>
                 <td className="tabular px-4 py-3 text-muted-foreground">{p.barcode}</td>
                 <td className="tabular px-4 py-3 text-right">{brl(p.price)}</td>
+                <td className="tabular px-4 py-3 text-right text-muted-foreground">
+                  {p.cost > 0 ? brl(p.cost) : "—"}
+                </td>
                 <td
                   className={cn(
                     "tabular px-4 py-3 text-right font-semibold",
@@ -531,7 +569,7 @@ function StockReportTab() {
             ))}
             {active.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                   {t("Nenhum produto ativo.")}
                 </td>
               </tr>
@@ -539,7 +577,7 @@ function StockReportTab() {
           </tbody>
           <tfoot className="border-t border-border">
             <tr className="bg-secondary/30 font-semibold">
-              <td className="px-4 py-3" colSpan={3}>
+              <td className="px-4 py-3" colSpan={4}>
                 {t("Total")}
               </td>
               <td className="tabular px-4 py-3 text-right">{totalUnits}</td>
@@ -556,10 +594,12 @@ function SummaryCard({
   label,
   value,
   highlight,
+  hint,
 }: {
   label: string;
   value: string;
   highlight?: boolean;
+  hint?: string | undefined;
 }) {
   return (
     <div
@@ -570,8 +610,14 @@ function SummaryCard({
     >
       <p className="text-xs uppercase tracking-widest text-muted-foreground">{label}</p>
       <p className={cn("tabular mt-1 text-xl font-bold", highlight && "text-primary")}>{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
+}
+
+function ProfitValue({ value }: { value: number | null }) {
+  if (value == null) return <>—</>;
+  return <span className={cn(value < 0 && "text-destructive")}>{brl(value)}</span>;
 }
 
 function ExportButton({ onClick }: { onClick: () => void }) {

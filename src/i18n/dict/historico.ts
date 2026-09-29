@@ -19,4 +19,7 @@ export const HISTORICO: Record<string, string> = {
   "Estoque baixo": "Low stock",
   "Valor total": "Total value",
   Desconto: "Discount",
+  "Custo do estoque": "Stock cost",
+  "Lucro potencial": "Potential profit",
+  "{n} venda(s) sem custo não entram no cálculo": "{n} sale(s) without cost are not included",
 };

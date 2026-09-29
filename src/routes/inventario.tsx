@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Boxes, Pencil, Plus, Minus, Trash2, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { exportToExcel, Pagination, SortableTh, usePagination, useSort } from "@/lib/table-tools";
-import { useT } from "@/i18n";
+import { useLocale, useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
 import { prefetchQuiet } from "@/lib/prefetch";
 
@@ -65,6 +65,7 @@ type FormState = {
   barcode: string;
   name: string;
   price: string;
+  cost: string;
   stock: string;
   min_stock: string;
   active: boolean;
@@ -72,10 +73,36 @@ type FormState = {
 
 const PAGE_SIZE = 50;
 
+const parseMoney = (value: string) => Number(value.replace(",", ".")) || 0;
+
+function MarginHint({ price, cost }: { price: number; cost: number }) {
+  const t = useT();
+  const locale = useLocale();
+  if (cost <= 0 || price <= 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        {t("Informe o custo para calcular o lucro nos relatórios.")}
+      </p>
+    );
+  }
+  const profit = price - cost;
+  return (
+    <p className={cn("tabular text-xs", profit < 0 ? "text-destructive" : "text-muted-foreground")}>
+      {t("Lucro por unidade: {profit} ({margin}% do preço)", {
+        profit: brl(profit),
+        margin: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(
+          (profit / price) * 100,
+        ),
+      })}
+    </p>
+  );
+}
+
 const emptyForm: FormState = {
   barcode: "",
   name: "",
   price: "",
+  cost: "",
   stock: "0",
   min_stock: "5",
   active: true,
@@ -147,6 +174,7 @@ function InventarioPage() {
     name: (p) => p.name,
     barcode: (p) => p.barcode,
     price: (p) => p.price,
+    cost: (p) => p.cost,
     stock: (p) => p.stock,
     active: (p) => (p.active ? t("Ativo") : t("Inativo")),
   });
@@ -164,6 +192,7 @@ function InventarioPage() {
         [t("Produto")]: p.name,
         [t("Código")]: p.barcode,
         [t("Preço")]: p.price,
+        [t("Custo")]: p.cost,
         [t("Estoque")]: p.stock,
         [t("Estoque mínimo")]: p.min_stock,
         [t("Status")]: p.active ? t("Ativo") : t("Inativo"),
@@ -183,6 +212,7 @@ function InventarioPage() {
       barcode: product.barcode,
       name: product.name,
       price: String(product.price).replace(".", ","),
+      cost: String(product.cost).replace(".", ","),
       stock: String(product.stock),
       min_stock: String(product.min_stock),
       active: product.active,
@@ -197,7 +227,8 @@ function InventarioPage() {
         ...(form.id ? { id: form.id } : {}),
         barcode: form.barcode.trim(),
         name: form.name.trim(),
-        price: Number(form.price.replace(",", ".")) || 0,
+        price: parseMoney(form.price),
+        cost: parseMoney(form.cost),
         stock: Number(form.stock) || 0,
         min_stock: Number(form.min_stock) || 0,
         active: form.active,
@@ -245,6 +276,7 @@ function InventarioPage() {
               <SortableTh label={t("Produto")} sortKey="name" sort={sort} onToggle={toggleSort} />
               <SortableTh label={t("Código")} sortKey="barcode" sort={sort} onToggle={toggleSort} />
               <SortableTh label={t("Preço")} sortKey="price" sort={sort} onToggle={toggleSort} align="right" />
+              <SortableTh label={t("Custo")} sortKey="cost" sort={sort} onToggle={toggleSort} align="right" />
               <SortableTh label={t("Estoque")} sortKey="stock" sort={sort} onToggle={toggleSort} align="center" />
               <SortableTh label={t("Status")} sortKey="active" sort={sort} onToggle={toggleSort} align="center" />
               <th className="px-4 py-3 text-right">{t("Ações")}</th>
@@ -258,6 +290,9 @@ function InventarioPage() {
                   <td className="px-4 py-3 font-medium">{p.name}</td>
                   <td className="tabular px-4 py-3 text-muted-foreground">{p.barcode}</td>
                   <td className="tabular px-4 py-3 text-right">{brl(p.price)}</td>
+                  <td className="tabular px-4 py-3 text-right text-muted-foreground">
+                    {p.cost > 0 ? brl(p.cost) : "—"}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       <Button
@@ -321,7 +356,7 @@ function InventarioPage() {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                   {t("Nenhum produto encontrado.")}
                 </td>
               </tr>
@@ -368,17 +403,33 @@ function InventarioPage() {
                   onChange={(e) => setForm({ ...form, barcode: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="price">{t("Preço (R$)")}</Label>
-                  <Input
-                    id="price"
-                    inputMode="decimal"
-                    className="tabular"
-                    value={form.price}
-                    onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  />
+              <div className="grid gap-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="price">{t("Preço (R$)")}</Label>
+                    <Input
+                      id="price"
+                      inputMode="decimal"
+                      className="tabular"
+                      value={form.price}
+                      onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="cost">{t("Custo (R$)")}</Label>
+                    <Input
+                      id="cost"
+                      inputMode="decimal"
+                      className="tabular"
+                      placeholder="0,00"
+                      value={form.cost}
+                      onChange={(e) => setForm({ ...form, cost: e.target.value })}
+                    />
+                  </div>
                 </div>
+                <MarginHint price={parseMoney(form.price)} cost={parseMoney(form.cost)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2">
                   <Label htmlFor="stock">{t("Estoque")}</Label>
                   <Input
