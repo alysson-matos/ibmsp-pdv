@@ -19,6 +19,8 @@ import {
   Lock,
   LogOut,
   ShieldCheck,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 import { getRole, unlock, lock, type GateRole } from "../lib/gate.functions";
@@ -28,6 +30,24 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { LanguageProvider, useI18n, useT, type Lang } from "@/i18n";
+import { ThemeProvider, themeInitScript, useTheme } from "@/hooks/use-theme";
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+  const t = useT();
+  const label = theme === "dark" ? t("Modo claro") : t("Modo escuro");
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={label}
+      title={label}
+      className="flex items-center justify-center rounded-md border border-input p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+    >
+      {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </button>
+  );
+}
 
 function LanguageSwitcher() {
   const { lang, setLang, t } = useI18n();
@@ -151,8 +171,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className="dark" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
       </head>
       <body>
@@ -209,7 +230,8 @@ function UnlockScreen() {
       >
         <div className="flex items-center gap-3 text-primary">
           <Lock className="size-5" />
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <LanguageSwitcher />
           </div>
         </div>
@@ -254,9 +276,11 @@ function AccessDenied() {
 
 function RootComponent() {
   return (
-    <LanguageProvider>
-      <RootShellContent />
-    </LanguageProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <RootShellContent />
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 
@@ -302,6 +326,7 @@ function RootShellContent() {
               ))}
             </nav>
             <div className="ml-auto flex items-center gap-3">
+              <ThemeToggle />
               <LanguageSwitcher />
               <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground">
                 <ShieldCheck className="size-3.5" />
