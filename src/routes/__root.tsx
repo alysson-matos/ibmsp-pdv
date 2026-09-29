@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -26,7 +26,6 @@ import {
 import { getRole, unlock, lock, type GateRole } from "../lib/gate.functions";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { LanguageProvider, useI18n, useT, type Lang } from "@/i18n";
