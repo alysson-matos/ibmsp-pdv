@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
+import { prefetchQuiet } from "@/lib/prefetch";
 
 const operatorsQuery = queryOptions({
   queryKey: ["operators"],
@@ -38,6 +39,8 @@ export const Route = createFileRoute("/operadores")({
   }),
   errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  loader: ({ context }) =>
+    prefetchQuiet(context.queryClient, operatorsQuery.queryKey, () => listOperators()),
   component: OperadoresPage,
 });
 

@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
+import { prefetchQuiet } from "@/lib/prefetch";
 
 
 const productsQuery = queryOptions({
@@ -72,6 +73,11 @@ export const Route = createFileRoute("/")({
 
   errorComponent: RouteError,
   notFoundComponent: NotFound,
+  loader: ({ context }) =>
+    Promise.all([
+      prefetchQuiet(context.queryClient, productsQuery.queryKey, () => listProducts()),
+      prefetchQuiet(context.queryClient, operatorsQuery.queryKey, () => listOperators()),
+    ]),
   component: PdvPage,
 });
 

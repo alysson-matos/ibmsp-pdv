@@ -7,6 +7,7 @@ import { Boxes, Pencil, Plus, Minus, Trash2, AlertTriangle, FileSpreadsheet } fr
 import { exportToExcel, Pagination, SortableTh, usePagination, useSort } from "@/lib/table-tools";
 import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
+import { prefetchQuiet } from "@/lib/prefetch";
 
 import {
   adjustStock,
@@ -54,6 +55,8 @@ export const Route = createFileRoute("/inventario")({
   }),
   errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  loader: ({ context }) =>
+    prefetchQuiet(context.queryClient, productsQuery.queryKey, () => listProducts()),
   component: InventarioPage,
 });
 

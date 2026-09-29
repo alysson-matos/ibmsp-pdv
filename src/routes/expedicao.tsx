@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
+import { prefetchQuiet } from "@/lib/prefetch";
 
 const shippingQuery = queryOptions({
   queryKey: ["shipping"],
@@ -53,6 +54,8 @@ export const Route = createFileRoute("/expedicao")({
   }),
   errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  loader: ({ context }) =>
+    prefetchQuiet(context.queryClient, shippingQuery.queryKey, () => listShipping()),
   component: ExpedicaoPage,
 });
 

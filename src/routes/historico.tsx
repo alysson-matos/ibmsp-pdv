@@ -6,6 +6,7 @@ import { exportToExcel, SortableTh, useSort } from "@/lib/table-tools";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
+import { prefetchQuiet } from "@/lib/prefetch";
 
 import {
   listOperators,
@@ -70,6 +71,8 @@ export const Route = createFileRoute("/historico")({
   }),
   errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
+  loader: ({ context }) =>
+    prefetchQuiet(context.queryClient, operatorsQuery.queryKey, () => listOperators()),
   component: HistoricoPage,
 });
 
