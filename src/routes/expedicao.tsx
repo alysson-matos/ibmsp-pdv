@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
+import { RouteError } from "@/components/route-error";
 
 const shippingQuery = queryOptions({
   queryKey: ["shipping"],
@@ -37,15 +38,12 @@ export const Route = createFileRoute("/expedicao")({
         property: "og:description",
         content: "Separe os produtos de cada compra e marque como entregue na retirada do comprador.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-  errorComponent: ({ error }) => (
-    <div role="alert" className="p-8 text-destructive">
-      {error.message}
-    </div>
-  ),
+  errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
-  loader: ({ context }) => context.queryClient.prefetchQuery(shippingQuery),
   component: ExpedicaoPage,
 });
 

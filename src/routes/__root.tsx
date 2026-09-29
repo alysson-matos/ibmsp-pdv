@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -26,11 +26,11 @@ import {
 import { getRole, unlock, lock, type GateRole } from "../lib/gate.functions";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { LanguageProvider, useI18n, useT, type Lang } from "@/i18n";
 import { ThemeProvider, themeInitScript, useTheme } from "@/hooks/use-theme";
+import { RouteError } from "@/components/route-error";
 
 // The logo file is white on transparent; it's used as a mask so it can be painted
 // in the church color (#64a99c) and stay visible in both light and dark mode.
@@ -117,59 +117,6 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  const router = useRouter();
-  const expired = error?.message?.includes("Sessão expirada");
-  useEffect(() => {
-    if (expired) {
-      // Session timed out: drop cached data and reload the role so the
-      // password screen appears instead of an error page.
-      router.options.context.queryClient?.clear();
-      router.invalidate().finally(() => reset());
-      return;
-    }
-    console.error(error);
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error, expired, router, reset]);
-
-  if (expired) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
-      </div>
-    );
-  }
-
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Esta página não carregou
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Tentar novamente
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Ir para o PDV
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -201,7 +148,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
+  errorComponent: RouteError,
 });
 
 function RootShell({ children }: { children: ReactNode }) {

@@ -32,6 +32,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { useT } from "@/i18n";
+import { RouteError } from "@/components/route-error";
 
 
 const productsQuery = queryOptions({
@@ -62,22 +63,15 @@ export const Route = createFileRoute("/")({
       },
       { property: "og:url", content: "https://ibmsp-pdv.lovable.app/" },
       { property: "og:image", content: `https://ibmsp-pdv.lovable.app${logoAsset.url}` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: `https://ibmsp-pdv.lovable.app${logoAsset.url}` },
     ],
     links: [{ rel: "canonical", href: "https://ibmsp-pdv.lovable.app/" }],
   }),
 
-  errorComponent: ({ error }) => (
-    <div role="alert" className="p-8 text-destructive">
-      {error.message}
-    </div>
-  ),
+  errorComponent: RouteError,
   notFoundComponent: NotFound,
-  loader: ({ context }) =>
-    Promise.all([
-      context.queryClient.prefetchQuery(productsQuery),
-      context.queryClient.prefetchQuery(operatorsQuery),
-    ]),
   component: PdvPage,
 });
 

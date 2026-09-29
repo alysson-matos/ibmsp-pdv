@@ -1,5 +1,6 @@
 import { useSession } from "@tanstack/react-start/server";
 import { createHash, timingSafeEqual } from "node:crypto";
+import { redirect } from "@tanstack/react-router";
 
 export type GateRole = "admin" | "user";
 export type GateSession = { role?: GateRole };
@@ -42,10 +43,10 @@ export async function currentRole(): Promise<GateRole | null> {
   return session.data.role ?? null;
 }
 
-/** Throws when the caller is not allowed. `scope: "admin"` = admin only. */
+/** Redirects expired callers through router control flow. `scope: "admin"` = admin only. */
 export async function requireRole(scope: "admin" | "any" = "admin"): Promise<GateRole> {
   const role = await currentRole();
-  if (!role) throw new Error("Sessão expirada. Digite a senha novamente.");
+  if (!role) throw redirect({ to: "/", reloadDocument: true });
   if (scope === "admin" && role !== "admin") {
     throw new Error("Acesso restrito ao administrador.");
   }

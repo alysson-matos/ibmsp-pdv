@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Boxes, Pencil, Plus, Minus, Trash2, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { exportToExcel, Pagination, SortableTh, usePagination, useSort } from "@/lib/table-tools";
 import { useT } from "@/i18n";
+import { RouteError } from "@/components/route-error";
 
 import {
   adjustStock,
@@ -47,15 +48,12 @@ export const Route = createFileRoute("/inventario")({
         property: "og:description",
         content: "Cadastro de produtos, preços, estoque mínimo e ajustes de entrada e saída.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-  errorComponent: ({ error }) => (
-    <div role="alert" className="p-8 text-destructive">
-      {error.message}
-    </div>
-  ),
+  errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
-  loader: ({ context }) => context.queryClient.prefetchQuery(productsQuery),
   component: InventarioPage,
 });
 

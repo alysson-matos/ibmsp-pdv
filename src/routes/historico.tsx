@@ -5,6 +5,7 @@ import { ReceiptText, ChevronDown, Boxes, PackageSearch, FileSpreadsheet } from 
 import { exportToExcel, SortableTh, useSort } from "@/lib/table-tools";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
+import { RouteError } from "@/components/route-error";
 
 import {
   listOperators,
@@ -63,15 +64,12 @@ export const Route = createFileRoute("/historico")({
         property: "og:description",
         content: "Vendas, itens, formas de pagamento e faturamento do período em um só lugar.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-  errorComponent: ({ error }) => (
-    <div role="alert" className="p-8 text-destructive">
-      {error.message}
-    </div>
-  ),
+  errorComponent: RouteError,
   notFoundComponent: () => <div className="p-8">Nada por aqui.</div>,
-  loader: ({ context }) => context.queryClient.prefetchQuery(operatorsQuery),
   component: HistoricoPage,
 });
 
