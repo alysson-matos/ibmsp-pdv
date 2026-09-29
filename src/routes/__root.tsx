@@ -32,6 +32,24 @@ import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { LanguageProvider, useI18n, useT, type Lang } from "@/i18n";
 import { ThemeProvider, themeInitScript, useTheme } from "@/hooks/use-theme";
 
+// The logo file is white on transparent; it's used as a mask so it can be painted
+// in the church color (#64a99c) and stay visible in both light and dark mode.
+const logoMask = {
+  maskImage: `url(${logoAsset.url})`,
+  WebkitMaskImage: `url(${logoAsset.url})`,
+  maskSize: "contain",
+  WebkitMaskSize: "contain",
+  maskRepeat: "no-repeat",
+  WebkitMaskRepeat: "no-repeat",
+  maskPosition: "center",
+  WebkitMaskPosition: "center",
+  backgroundColor: "#64a99c",
+} as const;
+
+function Logo({ className }: { className?: string }) {
+  return <div role="img" aria-label="PDV - IBMemorial" className={className} style={logoMask} />;
+}
+
 function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
   const t = useT();
@@ -219,11 +237,7 @@ function UnlockScreen() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-4">
-      <img
-        src={logoAsset.url}
-        alt="PDV - IBMemorial"
-        className="w-full max-w-[23.8rem] object-contain"
-      />
+      <Logo className="aspect-[2/1] w-full max-w-[23.8rem]" />
       <form
         onSubmit={onSubmit}
         className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg"
@@ -307,7 +321,7 @@ function RootShellContent() {
         <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
           <div className="mx-auto flex h-20 max-w-[1600px] items-center gap-6 px-4">
             <Link to="/" className="flex items-center gap-2">
-              <img src={logoAsset.url} alt="PDV - IBMemorial" className="h-14 w-auto object-contain" />
+              <Logo className="h-14 w-28" />
               <span className="sr-only">PDV - IBMemorial</span>
             </Link>
 
