@@ -1,14 +1,38 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { routeTree } from "./routeTree.gen";
 
+const SESSION_EXPIRED = "Sessão expirada";
+
 export const getRouter = () => {
-  const queryClient = new QueryClient({
+  // When the password session expires, clear cached data and reload the root
+  // loader so the unlock screen appears instead of a crashed page.
+  let handlingExpiry = false;
+  const onError = (error: unknown) => {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!msg.includes(SESSION_EXPIRED) || handlingExpiry) return;
+    handlingExpiry = true;
+    queryClient.cancelQueries().finally(() => {
+      queryClient.clear();
+      router.invalidate().finally(() => {
+        handlingExpiry = false;
+      });
+    });
+  };
+
+  const queryClient: QueryClient = new QueryClient({
+    queryCache: new QueryCache({ onError }),
+    mutationCache: new MutationCache({ onError }),
     defaultOptions: {
       // Data fetched during SSR or a menu hover stays fresh briefly, so it isn't
       // requested again right after the page renders.
-      queries: { staleTime: 10_000 },
+      queries: {
+        staleTime: 10_000,
+        retry: (count, error) =>
+          !(error instanceof Error && error.message.includes(SESSION_EXPIRED)) && count < 3,
+        throwOnError: false,
+      },
     },
   });
 
