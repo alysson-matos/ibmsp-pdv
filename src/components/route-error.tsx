@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
@@ -11,7 +11,7 @@ export function isSessionExpiredError(error: unknown) {
   return error instanceof Error && error.message.includes(SESSION_EXPIRED);
 }
 
-export function RouteError({ error, reset }: { error: Error; reset: () => void }) {
+export function RouteError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   const t = useT();
   const expired = isSessionExpiredError(error);
@@ -42,7 +42,7 @@ export function RouteError({ error, reset }: { error: Error; reset: () => void }
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold text-foreground">{t("Esta página não carregou")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
         <div className="mt-6 flex justify-center">
           <Button
             onClick={() => {
