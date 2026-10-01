@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
@@ -11,7 +11,7 @@ export function isSessionExpiredError(error: unknown) {
   return error instanceof Error && error.message.includes(SESSION_EXPIRED);
 }
 
-export function RouteError({ error, reset }: { error: Error; reset: () => void }) {
+export function RouteError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   const t = useT();
   const expired = isSessionExpiredError(error);
