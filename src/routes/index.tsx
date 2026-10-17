@@ -276,8 +276,20 @@ function PdvPage() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (!e.altKey || e.ctrlKey || e.metaKey) return;
-      const key = e.key.toLowerCase();
+      if (e.metaKey) return;
+      const isMac = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
+      // Alt (Option on Mac) or, on Mac only, Control as an alternative.
+      const altOnly = e.altKey && !e.ctrlKey;
+      const macCtrl = isMac && e.ctrlKey && !e.altKey;
+      if (!altOnly && !macCtrl) return;
+      // Use the physical key (e.code): on Mac, Option changes e.key into
+      // special characters (¡, ∫, ç, ƒ, dead keys), so e.key never matches.
+      const codeMap: Record<string, string> = {
+        Digit1: "1", Digit2: "2", Digit3: "3", Digit4: "4",
+        Numpad1: "1", Numpad2: "2", Numpad3: "3", Numpad4: "4",
+        KeyB: "b", KeyC: "c", KeyF: "f", KeyN: "n",
+      };
+      const key = codeMap[e.code] ?? e.key.toLowerCase();
       const paymentByKey: Record<string, PaymentMethod> = {
         "1": "credito",
         "2": "debito",
@@ -311,8 +323,8 @@ function PdvPage() {
         shortcutRef.current.newSale();
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, []);
 
 
