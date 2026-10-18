@@ -267,7 +267,7 @@ function SalesTab() {
         ))}
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-lg">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
@@ -432,7 +432,7 @@ function StockTab() {
       </div>
 
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-lg">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
@@ -531,7 +531,7 @@ function StockReportTab() {
         />
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-lg">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>

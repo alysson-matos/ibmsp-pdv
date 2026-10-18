@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useIsMutating,
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState, type ComponentType } from "react";
 import { toast } from "sonner";
@@ -32,6 +38,8 @@ const shippingQuery = queryOptions({
   queryKey: ["shipping"],
   queryFn: () => listShipping(),
 });
+
+const SHIPPING_POLL_MS = 3_000;
 
 export const Route = createFileRoute("/expedicao")({
   head: () => ({
@@ -73,8 +81,14 @@ function matches(sale: Sale, term: string) {
 
 function ExpedicaoPage() {
   const t = useT();
-  const { data: sales } = useSuspenseQuery(shippingQuery);
   const queryClient = useQueryClient();
+  // New orders from the PDV show up on their own. Polling pauses while a card is
+  // being moved so a reload can't undo the move before the server saves it.
+  const moving = useIsMutating({ mutationKey: ["sale-status"] }) > 0;
+  const { data: sales } = useSuspenseQuery({
+    ...shippingQuery,
+    refetchInterval: moving ? false : SHIPPING_POLL_MS,
+  });
   const updateFn = useServerFn(setSaleStatus);
 
   const [search, setSearch] = useState("");

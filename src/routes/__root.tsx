@@ -281,21 +281,24 @@ function RootShellContent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-background">
+      {/* overflow-x-clip keeps the page from sliding sideways on phones; unlike
+          overflow-hidden it doesn't break the sticky header. */}
+      <div className="min-h-screen overflow-x-clip bg-background">
         <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
-          <div className="mx-auto flex h-20 max-w-[1600px] items-center gap-6 px-4">
+          {/* On phones the menu drops to its own row and scrolls sideways by itself. */}
+          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2 md:h-20 md:flex-nowrap md:py-0">
             <Link to="/" className="flex items-center gap-2">
-              <Logo className="h-14 w-28" />
+              <Logo className="h-10 w-20 md:h-14 md:w-28" />
               <span className="sr-only">PDV - IBMemorial</span>
             </Link>
 
-            <nav className="flex items-center gap-1">
+            <nav className="order-last -mx-4 flex w-[calc(100%+2rem)] items-center gap-1 overflow-x-auto px-4 pb-1 md:order-none md:mx-0 md:w-auto md:overflow-visible md:px-0 md:pb-0">
               {visibleNav.map(({ to, label, icon: Icon }) => (
                 <Link
                   key={to}
                   to={to}
                   activeOptions={{ exact: to === "/" }}
-                  className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                   activeProps={{ className: "bg-secondary !text-foreground font-semibold" }}
                 >
                   <Icon className="size-4" />
@@ -303,10 +306,10 @@ function RootShellContent() {
                 </Link>
               ))}
             </nav>
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <ThemeToggle />
               <LanguageSwitcher />
-              <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground">
+              <span className="hidden items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground sm:flex">
                 <ShieldCheck className="size-3.5" />
                 {isAdmin ? t("Admin") : t("Operação")}
               </span>
@@ -330,7 +333,7 @@ function RootShellContent() {
                 className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
                 <LogOut className="size-3.5" />
-                {t("Sair")}
+                <span className="hidden sm:inline">{t("Sair")}</span>
               </button>
             </div>
           </div>
