@@ -1,6 +1,5 @@
 import { useSession } from "@tanstack/react-start/server";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { redirect } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -134,7 +133,10 @@ export async function storeRoleFor(
   return data.role === "gerente" ? "gerente" : "operacao";
 }
 
-const backToStart = () => redirect({ to: "/", reloadDocument: true });
+// Server functions are called from queries, where a thrown redirect arrives as a raw
+// 307 Response. The client handles this message by clearing the cache and reloading
+// the root loader, which shows the login or store picker.
+const backToStart = () => new Error("Sessão expirada. Entre novamente.");
 
 /**
  * Store context for PDV data. Redirects to the start (login or store picker) when the
