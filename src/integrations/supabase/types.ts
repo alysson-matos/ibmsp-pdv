@@ -14,8 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_users: {
+        Row: {
+          active: boolean
+          created_at: string
+          display_name: string
+          id: string
+          password_hash: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          display_name: string
+          id?: string
+          password_hash: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          display_name?: string
+          id?: string
+          password_hash?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       operators: {
         Row: {
+          store_id: string
           active: boolean
           created_at: string
           id: string
@@ -23,6 +54,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          store_id: string
           active?: boolean
           created_at?: string
           id?: string
@@ -30,6 +62,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          store_id?: string
           active?: boolean
           created_at?: string
           id?: string
@@ -40,6 +73,7 @@ export type Database = {
       }
       products: {
         Row: {
+          store_id: string
           active: boolean
           barcode: string
           cost: number
@@ -52,6 +86,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          store_id: string
           active?: boolean
           barcode: string
           cost?: number
@@ -64,6 +99,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          store_id?: string
           active?: boolean
           barcode?: string
           cost?: number
@@ -133,6 +169,7 @@ export type Database = {
       }
       sales: {
         Row: {
+          store_id: string
           amount_received: number | null
           change_amount: number
           created_at: string
@@ -148,6 +185,7 @@ export type Database = {
           total: number
         }
         Insert: {
+          store_id: string
           amount_received?: number | null
           change_amount?: number
           created_at?: string
@@ -163,6 +201,7 @@ export type Database = {
           total?: number
         }
         Update: {
+          store_id?: string
           amount_received?: number | null
           change_amount?: number
           created_at?: string
@@ -229,6 +268,78 @@ export type Database = {
           },
         ]
       }
+      store_members: {
+        Row: {
+          created_at: string
+          role: string
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role?: string
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_members_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          active: boolean
+          color: string
+          created_at: string
+          font: string
+          id: string
+          logo: string | null
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          color?: string
+          created_at?: string
+          font?: string
+          id?: string
+          logo?: string | null
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          color?: string
+          created_at?: string
+          font?: string
+          id?: string
+          logo?: string | null
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -242,6 +353,7 @@ export type Database = {
           _items: Json
           _operator_id?: string
           _payment_method: string
+          _store_id: string
         }
         Returns: string
       }

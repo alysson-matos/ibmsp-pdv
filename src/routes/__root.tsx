@@ -21,9 +21,12 @@ import {
   ShieldCheck,
   Sun,
   Moon,
+  Store,
+  ArrowLeftRight,
+  Settings2,
 } from "lucide-react";
 
-import { getRole, unlock, lock, type GateRole } from "../lib/gate.functions";
+import { getAccess, unlock, lock, selectStore, type Access } from "../lib/gate.functions";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
@@ -31,6 +34,7 @@ import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { LanguageProvider, useI18n, useT, type Lang } from "@/i18n";
 import { ThemeProvider, themeInitScript, useTheme } from "@/hooks/use-theme";
 import { RouteError } from "@/components/route-error";
+import { StoreFonts, StoreLogo, StoreThemeStyle, storeFontStack } from "@/lib/store-theme";
 
 // The logo file is white on transparent; it's used as a mask so it can be painted
 // in the church color (#64a99c) and stay visible in both light and dark mode.
@@ -144,7 +148,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
   }),
 
-  loader: () => getRole(),
+  loader: () => getAccess(),
+  // Access only changes on login, logout, store switch or admin edits, which all
+  // call router.invalidate(); it isn't reloaded on every navigation.
+  staleTime: Infinity,
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -167,17 +174,20 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 const navItems = [
-  { to: "/", label: "PDV", icon: ScanBarcode, adminOnly: false },
-  { to: "/expedicao", label: "Expedição", icon: PackageCheck, adminOnly: false },
-  { to: "/historico", label: "Histórico", icon: ReceiptText, adminOnly: true },
-  { to: "/inventario", label: "Inventário", icon: Boxes, adminOnly: true },
-  { to: "/operadores", label: "Operadores", icon: Users, adminOnly: true },
+  { to: "/", label: "PDV", icon: ScanBarcode, manageOnly: false },
+  { to: "/expedicao", label: "Expedição", icon: PackageCheck, manageOnly: false },
+  { to: "/historico", label: "Histórico", icon: ReceiptText, manageOnly: true },
+  { to: "/inventario", label: "Inventário", icon: Boxes, manageOnly: true },
+  { to: "/operadores", label: "Operadores", icon: Users, manageOnly: true },
 ] as const;
+
+const ADMIN_PATH = "/lojas";
 
 function UnlockScreen() {
   const router = useRouter();
   const t = useT();
   const unlockFn = useServerFn(unlock);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -187,9 +197,9 @@ function UnlockScreen() {
     setLoading(true);
     setError("");
     try {
-      const res = await unlockFn({ data: { password } });
+      const res = await unlockFn({ data: { username, password } });
       if (!res.ok) {
-        setError(t("Senha incorreta."));
+        setError(t("Usuário ou senha incorretos."));
         setPassword("");
         return;
       }
@@ -198,6 +208,9 @@ function UnlockScreen() {
       setLoading(false);
     }
   }
+
+  const inputClass =
+    "mt-3 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary";
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-4">
@@ -215,18 +228,31 @@ function UnlockScreen() {
         </div>
 
         <h1 className="mt-4 text-lg font-semibold text-foreground">{t("Acesso restrito")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("Digite a senha para entrar no sistema.")}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("Entre com seu usuário e senha.")}</p>
+        <input
+          type="text"
+          autoFocus
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder={t("Usuário")}
+          aria-label={t("Usuário")}
+          className={inputClass}
+        />
         <input
           type="password"
-          autoFocus
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder={t("Senha")}
-          className="mt-4 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+          aria-label={t("Senha")}
+          className={inputClass}
         />
+        <p className="mt-2 text-xs text-muted-foreground">
+          {t("Administrador: deixe o usuário em branco e use a senha de admin.")}
+        </p>
         {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
         <button
           type="submit"
@@ -240,13 +266,123 @@ function UnlockScreen() {
   );
 }
 
+function SignOutButton({ onSignOut, disabled }: { onSignOut: () => void; disabled: boolean }) {
+  const t = useT();
+  return (
+    <button
+      onClick={onSignOut}
+      disabled={disabled}
+      className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+    >
+      <LogOut className="size-3.5" />
+      <span className="hidden sm:inline">{t("Sair")}</span>
+    </button>
+  );
+}
+
+function StorePicker({ access, onSignOut }: { access: Access; onSignOut: () => void }) {
+  const t = useT();
+  const router = useRouter();
+  const { queryClient } = Route.useRouteContext();
+  const selectFn = useServerFn(selectStore);
+  const [entering, setEntering] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const isAdmin = access.role === "admin";
+
+  async function enter(storeId: string) {
+    setEntering(storeId);
+    setError("");
+    try {
+      // Cached data belongs to the previous store.
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      await selectFn({ data: { storeId } });
+      await router.invalidate();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setEntering(null);
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background px-4 py-6">
+      <StoreFonts fonts={access.stores.map((s) => s.font)} />
+      <div className="mx-auto flex max-w-5xl items-center gap-2">
+        <Logo className="h-10 w-20 md:h-14 md:w-28" />
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
+          <LanguageSwitcher />
+          <SignOutButton onSignOut={onSignOut} disabled={false} />
+        </div>
+      </div>
+
+      <main className="mx-auto mt-8 max-w-5xl">
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
+          <Store className="size-6 text-primary" /> {t("Escolha a loja")}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t("Olá, {name}. Em qual loja você vai trabalhar agora?", { name: access.userName })}
+        </p>
+        {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {access.stores.map((store) => (
+            <button
+              key={store.id}
+              type="button"
+              disabled={entering !== null}
+              onClick={() => enter(store.id)}
+              style={{ borderColor: store.color, fontFamily: storeFontStack(store.font) }}
+              className="relative flex flex-col items-center gap-4 overflow-hidden rounded-2xl border-2 bg-card p-6 pt-8 text-center shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"
+            >
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-2"
+                style={{ backgroundColor: store.color }}
+              />
+              <StoreLogo store={store} className="h-20 w-40" />
+              <span className="text-xl font-bold" style={{ color: store.color }}>
+                {store.name}
+              </span>
+              {!store.active ? (
+                <span className="rounded-md bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+                  {t("Inativa")}
+                </span>
+              ) : null}
+              {entering === store.id ? (
+                <span className="text-xs text-muted-foreground">{t("Entrando...")}</span>
+              ) : null}
+            </button>
+          ))}
+
+          {isAdmin ? (
+            <Link
+              to={ADMIN_PATH}
+              className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border p-6 text-center text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+            >
+              <Settings2 className="size-8" />
+              <span className="font-semibold">{t("Gerenciar lojas e usuários")}</span>
+            </Link>
+          ) : null}
+        </div>
+
+        {access.stores.length === 0 && !isAdmin ? (
+          <p className="mt-6 rounded-xl border border-border bg-card px-4 py-12 text-center text-muted-foreground">
+            {t("Você ainda não tem acesso a nenhuma loja. Peça ao administrador para liberar.")}
+          </p>
+        ) : null}
+      </main>
+    </div>
+  );
+}
+
 function AccessDenied() {
   const t = useT();
   return (
     <div className="mx-auto max-w-md px-4 py-24 text-center">
       <h2 className="text-lg font-semibold text-foreground">{t("Acesso restrito")}</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        {t("Esta área é exclusiva do administrador. Saia e entre com a senha de admin.")}
+        {t("Esta área é exclusiva do gerente da loja ou do administrador.")}
       </p>
     </div>
   );
@@ -262,34 +398,94 @@ function RootComponent() {
   );
 }
 
+function Spinner() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+    </div>
+  );
+}
+
 function RootShellContent() {
   const { queryClient } = Route.useRouteContext();
-  const role = Route.useLoaderData() as GateRole | null;
+  const access = Route.useLoaderData() as Access | null;
   const router = useRouter();
   const t = useT();
   const lockFn = useServerFn(lock);
+  const selectFn = useServerFn(selectStore);
   const [signingOut, setSigningOut] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
-  if (!role || signingOut) return <UnlockScreen />;
+  // Unmount the store pages before changing the server session so their active
+  // queries can't refetch in between (with an expired session or the wrong store).
+  async function resetSession(setBusy: (v: boolean) => void, action: () => Promise<unknown>) {
+    flushSync(() => setBusy(true));
+    try {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      await action();
+      await router.invalidate();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const signOut = () => resetSession(setSigningOut, () => lockFn());
+  const leaveStore = () =>
+    resetSession(setLeaving, async () => {
+      await selectFn({ data: { storeId: null } });
+      await router.navigate({ to: "/" });
+    });
 
+  if (!access || signingOut) return <UnlockScreen />;
+  if (leaving) return <Spinner />;
 
-  const isAdmin = role === "admin";
-  const visibleNav = navItems.filter((item) => isAdmin || !item.adminOnly);
+  const isAdmin = access.role === "admin";
+  const store = access.store;
   const currentPath = router.state.location.pathname;
-  const blocked =
-    !isAdmin && navItems.some((item) => item.adminOnly && currentPath.startsWith(item.to));
+  const onAdminPage = currentPath.startsWith(ADMIN_PATH);
+
+  if (!store && !(isAdmin && onAdminPage)) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <StorePicker access={access} onSignOut={signOut} />
+        <Toaster position="top-center" richColors />
+      </QueryClientProvider>
+    );
+  }
+
+  const canManage = !!store && store.storeRole !== "operacao";
+  const visibleNav = store ? navItems.filter((item) => canManage || !item.manageOnly) : [];
+  const blocked = onAdminPage
+    ? !isAdmin
+    : !canManage &&
+      navItems.some((item) => item.manageOnly && currentPath.startsWith(item.to));
+
+  const roleLabel = isAdmin
+    ? t("Admin")
+    : store?.storeRole === "gerente"
+      ? t("Gerente")
+      : t("Operação");
 
   return (
     <QueryClientProvider client={queryClient}>
+      {store ? <StoreThemeStyle store={store} /> : null}
       {/* overflow-x-clip keeps the page from sliding sideways on phones; unlike
           overflow-hidden it doesn't break the sticky header. */}
       <div className="min-h-screen overflow-x-clip bg-background">
-        <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
+        <header className="sticky top-0 z-30 border-t-4 border-b border-t-primary border-b-border bg-card/80 backdrop-blur">
           {/* On phones the menu drops to its own row and scrolls sideways by itself. */}
           <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2 md:h-20 md:flex-nowrap md:py-0">
-            <Link to="/" className="flex items-center gap-2">
-              <Logo className="h-10 w-20 md:h-14 md:w-28" />
-              <span className="sr-only">PDV - IBMemorial</span>
+            <Link to={store ? "/" : ADMIN_PATH} className="flex min-w-0 items-center gap-3">
+              {store ? (
+                <StoreLogo store={store} className="h-10 w-20 shrink-0 md:h-14 md:w-28" />
+              ) : (
+                <Logo className="h-10 w-20 shrink-0 md:h-14 md:w-28" />
+              )}
+              <span className="max-w-40 truncate text-sm font-bold text-primary md:text-base">
+                {store ? store.name : t("Administração")}
+              </span>
             </Link>
 
             <nav className="order-last -mx-4 flex w-[calc(100%+2rem)] items-center gap-1 overflow-x-auto px-4 pb-1 md:order-none md:mx-0 md:w-auto md:overflow-visible md:px-0 md:pb-0">
@@ -305,36 +501,40 @@ function RootShellContent() {
                   {t(label)}
                 </Link>
               ))}
+              {isAdmin ? (
+                <Link
+                  to={ADMIN_PATH}
+                  className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  activeProps={{ className: "bg-secondary !text-foreground font-semibold" }}
+                >
+                  <Settings2 className="size-4" />
+                  {t("Lojas")}
+                </Link>
+              ) : null}
             </nav>
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <ThemeToggle />
               <LanguageSwitcher />
-              <span className="hidden items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground sm:flex">
+              <span
+                className="hidden items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground xl:flex"
+                title={access.userName}
+              >
                 <ShieldCheck className="size-3.5" />
-                {isAdmin ? t("Admin") : t("Operação")}
+                {roleLabel}
               </span>
 
               <button
-                onClick={async () => {
-                  // Unmount protected routes before clearing the server session so
-                  // their active queries cannot refetch with an expired session.
-                  flushSync(() => setSigningOut(true));
-                  try {
-                    await queryClient.cancelQueries();
-                    queryClient.clear();
-                    await lockFn();
-                    await router.invalidate();
-                  } catch (error) {
-                    console.error(error);
-                    setSigningOut(false);
-                  }
-                }}
-                disabled={signingOut}
+                onClick={leaveStore}
+                title={store ? t("Trocar loja") : t("Escolher loja")}
                 className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
-                <LogOut className="size-3.5" />
-                <span className="hidden sm:inline">{t("Sair")}</span>
+                <ArrowLeftRight className="size-3.5" />
+                <span className="hidden sm:inline">
+                  {store ? t("Trocar loja") : t("Escolher loja")}
+                </span>
               </button>
+
+              <SignOutButton onSignOut={signOut} disabled={signingOut} />
             </div>
           </div>
         </header>

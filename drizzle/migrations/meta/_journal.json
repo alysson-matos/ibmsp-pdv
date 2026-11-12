@@ -8,6 +8,13 @@
       "when": 1790724584974,
       "tag": "0000_add_product_cost",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794355200000,
+      "tag": "0001_lojas",
+      "breakpoints": true
     }
   ]
 }

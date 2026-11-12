@@ -1,29 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
-
 /**
- * Server-side Supabase client for the PDV tables.
+ * Server-side Supabase access for the PDV tables of the store chosen in the session.
  * These tables are closed to the browser (no anon/authenticated grants, RLS with no
- * policies), so every read/write goes through server functions using the service role.
+ * policies), so every read/write goes through server functions using the service role,
+ * and every query must be filtered by the returned `storeId`.
+ * `scope: "manage"` = admin or the store's manager; `"any"` = anyone with access to the store.
  */
-export async function getServerSupabase(scope: "admin" | "any" = "admin") {
-  const { requireRole } = await import("./gate.server");
-  await requireRole(scope);
-
-  const key = process.env["SUPABASE_SERVICE_ROLE_KEY"]!;
-  const url = process.env["SUPABASE_URL"]!;
-
-  return createClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) {
-          h.delete("Authorization");
-        }
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      },
-    },
-  });
+export async function getStoreSupabase(scope: "manage" | "any" = "manage") {
+  const { requireStore } = await import("./gate.server");
+  return requireStore(scope);
 }

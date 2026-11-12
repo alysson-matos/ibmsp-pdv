@@ -2,21 +2,92 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 export type GateRole = "admin" | "user";
+export type StoreRole = "admin" | "gerente" | "operacao";
 
-export const getRole = createServerFn({ method: "GET" }).handler(async (): Promise<GateRole | null> => {
-  const { currentRole } = await import("./gate.server");
-  return currentRole();
+/** What the app needs to show a store: its name and design. */
+export type StoreTheme = {
+  id: string;
+  name: string;
+  color: string;
+  font: string;
+  logo: string | null;
+  active: boolean;
+};
+
+export type Access = {
+  role: GateRole;
+  userName: string;
+  /** Stores this person can enter (the admin sees all, including inactive ones). */
+  stores: StoreTheme[];
+  /** The store chosen after login, if any. */
+  store: (StoreTheme & { storeRole: StoreRole }) | null;
+};
+
+const STORE_COLUMNS = "id, name, color, font, logo, active";
+
+export const getAccess = createServerFn({ method: "GET" }).handler(async (): Promise<Access | null> => {
+  const { getGateSession, serviceSupabase, storeRoleFor } = await import("./gate.server");
+  const session = await getGateSession();
+  const data = session.data;
+  if (!data.role) return null;
+
+  const supabase = serviceSupabase();
+  let stores: StoreTheme[];
+
+  if (data.role === "admin") {
+    const { data: rows, error } = await supabase
+      .from("stores")
+      .select(STORE_COLUMNS)
+      .order("sort_order")
+      .order("name");
+    if (error) throw new Error(error.message);
+    stores = rows ?? [];
+  } else {
+    const { data: user } = await supabase
+      .from("app_users")
+      .select("active")
+      .eq("id", data.userId ?? "")
+      .maybeSingle();
+    if (!user?.active) {
+      // User removed or deactivated: back to the login screen.
+      await session.clear();
+      return null;
+    }
+    const { data: rows, error } = await supabase
+      .from("store_members")
+      .select(`stores!inner(${STORE_COLUMNS}, sort_order)`)
+      .eq("user_id", data.userId ?? "")
+      .eq("stores.active", true);
+    if (error) throw new Error(error.message);
+    stores = (rows ?? [])
+      .map((r) => r.stores as unknown as StoreTheme & { sort_order: number })
+      .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
+      .map(({ sort_order: _ignored, ...store }) => store);
+  }
+
+  let store: Access["store"] = null;
+  if (data.storeId) {
+    const found = stores.find((s) => s.id === data.storeId);
+    const storeRole = found ? await storeRoleFor(supabase, data, found.id) : null;
+    if (found && storeRole) store = { ...found, storeRole };
+    else await session.update({ ...data, storeId: undefined });
+  }
+
+  return { role: data.role, userName: data.userName ?? "", stores, store };
 });
 
 export const unlock = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ password: z.string().min(1) }).parse(data))
-  .handler(async ({ data }): Promise<{ ok: boolean; role: GateRole | null }> => {
-    const { resolveRole, getGateSession } = await import("./gate.server");
-    const role = resolveRole(data.password);
-    if (!role) return { ok: false, role: null };
+  .inputValidator((data: unknown) =>
+    z.object({ username: z.string().default(""), password: z.string().min(1) }).parse(data),
+  )
+  .handler(async ({ data }): Promise<{ ok: boolean }> => {
+    const { resolveLogin, getGateSession } = await import("./gate.server");
+    const login = await resolveLogin(data.username, data.password);
+    if (!login) return { ok: false };
     const session = await getGateSession();
-    await session.update({ role });
-    return { ok: true, role };
+    await session.clear();
+    await session.update(login);
+    return { ok: true };
   });
 
 export const lock = createServerFn({ method: "POST" }).handler(async () => {
@@ -25,3 +96,21 @@ export const lock = createServerFn({ method: "POST" }).handler(async () => {
   await session.clear();
   return { ok: true };
 });
+
+/** Enters a store (or leaves the current one with `storeId: null`). */
+export const selectStore = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z.object({ storeId: z.string().uuid().nullable() }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getGateSession, serviceSupabase, storeRoleFor } = await import("./gate.server");
+    const session = await getGateSession();
+    if (!session.data.role) throw new Error("Sessão expirada. Entre novamente.");
+
+    if (data.storeId) {
+      const role = await storeRoleFor(serviceSupabase(), session.data, data.storeId);
+      if (!role) throw new Error("Você não tem acesso a esta loja.");
+    }
+    await session.update({ ...session.data, storeId: data.storeId ?? undefined });
+    return { ok: true };
+  });
