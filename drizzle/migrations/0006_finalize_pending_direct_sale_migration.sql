@@ -1,0 +1,1 @@
+COMMENT ON COLUMN public.stores.skip_shipping IS 'When enabled, new sales are delivered immediately and bypass the shipping queue.';

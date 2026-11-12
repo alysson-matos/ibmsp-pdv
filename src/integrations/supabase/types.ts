@@ -433,6 +433,7 @@ export type Database = {
           id: string
           logo: string | null
           name: string
+          skip_shipping: boolean
           sort_order: number
           updated_at: string
         }
@@ -445,6 +446,7 @@ export type Database = {
           id?: string
           logo?: string | null
           name: string
+          skip_shipping?: boolean
           sort_order?: number
           updated_at?: string
         }
@@ -457,6 +459,7 @@ export type Database = {
           id?: string
           logo?: string | null
           name?: string
+          skip_shipping?: boolean
           sort_order?: number
           updated_at?: string
         }

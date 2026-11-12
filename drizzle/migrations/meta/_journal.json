@@ -43,6 +43,13 @@
       "when": 1794500000000,
       "tag": "0005_lojas_sem_expedicao",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794515306077,
+      "tag": "0006_finalize_pending_direct_sale_migration",
+      "breakpoints": true
     }
   ]
 }
