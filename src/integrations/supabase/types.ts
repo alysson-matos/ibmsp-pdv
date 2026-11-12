@@ -44,92 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      customer_balance_movements: {
-        Row: {
-          balance_after: number
-          created_at: string
-          customer_id: string
-          delta: number
-          id: string
-          reason: string
-          sale_id: string | null
-        }
-        Insert: {
-          balance_after: number
-          created_at?: string
-          customer_id: string
-          delta: number
-          id?: string
-          reason?: string
-          sale_id?: string | null
-        }
-        Update: {
-          balance_after?: number
-          created_at?: string
-          customer_id?: string
-          delta?: number
-          id?: string
-          reason?: string
-          sale_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_balance_movements_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_balance_movements_sale_id_fkey"
-            columns: ["sale_id"]
-            isOneToOne: false
-            referencedRelation: "sales"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      customers: {
-        Row: {
-          active: boolean
-          balance: number
-          created_at: string
-          id: string
-          name: string
-          notes: string
-          store_id: string
-          updated_at: string
-        }
-        Insert: {
-          active?: boolean
-          balance?: number
-          created_at?: string
-          id?: string
-          name: string
-          notes?: string
-          store_id: string
-          updated_at?: string
-        }
-        Update: {
-          active?: boolean
-          balance?: number
-          created_at?: string
-          id?: string
-          name?: string
-          notes?: string
-          store_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customers_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       operators: {
         Row: {
           active: boolean
@@ -271,7 +185,6 @@ export type Database = {
       }
       sales: {
         Row: {
-          customer_id: string | null
           amount_received: number | null
           change_amount: number
           created_at: string
@@ -288,7 +201,6 @@ export type Database = {
           total: number
         }
         Insert: {
-          customer_id?: string | null
           amount_received?: number | null
           change_amount?: number
           created_at?: string
@@ -305,7 +217,6 @@ export type Database = {
           total?: number
         }
         Update: {
-          customer_id?: string | null
           amount_received?: number | null
           change_amount?: number
           created_at?: string
@@ -418,7 +329,6 @@ export type Database = {
       }
       stores: {
         Row: {
-          customer_balance: boolean
           active: boolean
           color: string
           created_at: string
@@ -430,7 +340,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          customer_balance?: boolean
           active?: boolean
           color?: string
           created_at?: string
@@ -442,7 +351,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          customer_balance?: boolean
           active?: boolean
           color?: string
           created_at?: string
@@ -460,18 +368,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      adjust_customer_balance: {
-        Args: {
-          _customer_id: string
-          _delta: number
-          _reason?: string
-          _store_id: string
-        }
-        Returns: number
-      }
       checkout_sale: {
         Args: {
-          _customer_id?: string
           _amount_received?: number
           _customer_name?: string
           _discount?: number
