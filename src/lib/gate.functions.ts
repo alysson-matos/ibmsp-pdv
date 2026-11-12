@@ -12,6 +12,8 @@ export type StoreTheme = {
   font: string;
   logo: string | null;
   active: boolean;
+  /** Sales can be paid with a balance loaded in advance for registered customers. */
+  customer_balance: boolean;
 };
 
 export type Access = {
@@ -23,7 +25,7 @@ export type Access = {
   store: (StoreTheme & { storeRole: StoreRole }) | null;
 };
 
-const STORE_COLUMNS = "id, name, color, font, logo, active";
+const STORE_COLUMNS = "id, name, color, font, logo, active, customer_balance";
 
 export const getAccess = createServerFn({ method: "GET" }).handler(async (): Promise<Access | null> => {
   const { getGateSession, serviceSupabase, storeRoleFor } = await import("./gate.server");
@@ -63,6 +65,12 @@ export const getAccess = createServerFn({ method: "GET" }).handler(async (): Pro
       .map((r) => r.stores as unknown as StoreTheme & { sort_order: number })
       .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
       .map(({ sort_order: _ignored, ...store }) => store);
+  }
+
+  // A user with a single store goes straight into it (no picker, no switching).
+  if (data.role === "user" && !data.storeId && stores.length === 1) {
+    data.storeId = stores[0]!.id;
+    await session.update({ ...data });
   }
 
   let store: Access["store"] = null;

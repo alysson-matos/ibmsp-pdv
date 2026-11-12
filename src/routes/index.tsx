@@ -1,5 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -14,6 +20,8 @@ import {
   Wallet,
   CheckCircle2,
   ShoppingCart,
+  PiggyBank,
+  X,
 } from "lucide-react";
 
 import {
@@ -34,6 +42,8 @@ import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
 import { prefetchQuiet } from "@/lib/prefetch";
+import { listCustomers, type Customer } from "@/lib/customers.functions";
+import { useCurrentStore } from "@/lib/use-current-store";
 
 
 const productsQuery = queryOptions({
@@ -44,6 +54,11 @@ const productsQuery = queryOptions({
 const operatorsQuery = queryOptions({
   queryKey: ["operators"],
   queryFn: () => listOperators(),
+});
+
+const customersQuery = queryOptions({
+  queryKey: ["customers"],
+  queryFn: () => listCustomers(),
 });
 
 const OPERATOR_STORAGE_KEY = "pdv:operator-id";
@@ -93,6 +108,7 @@ const paymentIcons: Record<PaymentMethod, typeof Banknote> = {
   debito: CreditCard,
   credito: Wallet,
   pix: QrCode,
+  saldo: PiggyBank,
 };
 
 function PdvPage() {
@@ -101,6 +117,10 @@ function PdvPage() {
   const { data: operators } = useSuspenseQuery(operatorsQuery);
   const queryClient = useQueryClient();
   const checkoutFn = useServerFn(checkout);
+  const store = useCurrentStore();
+  const balanceEnabled = !!store?.customer_balance;
+  const paymentMethods = PAYMENT_METHODS.filter((m) => m !== "saldo" || balanceEnabled);
+  const { data: customers = [] } = useQuery({ ...customersQuery, enabled: balanceEnabled });
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [scan, setScan] = useState("");
@@ -108,6 +128,7 @@ function PdvPage() {
   const [payment, setPayment] = useState<PaymentMethod>("credito");
   const [received, setReceived] = useState("");
   const [customer, setCustomer] = useState("");
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [operatorId, setOperatorId] = useState("");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
@@ -146,6 +167,13 @@ function PdvPage() {
   const total = subtotal - discountValue;
   const receivedValue = Number(received.replace(",", ".")) || 0;
   const change = payment === "dinheiro" && receivedValue > 0 ? receivedValue - total : 0;
+
+  const payWithBalance = payment === "saldo";
+  const selectedCustomer = payWithBalance
+    ? (customers.find((c) => c.id === customerId && c.active) ?? null)
+    : null;
+  const balanceShort = selectedCustomer ? selectedCustomer.balance < total : false;
+  const buyerMissing = payWithBalance ? !selectedCustomer : !customer.trim();
 
   function addProduct(product: Product) {
     setLastSale(null);
@@ -214,6 +242,7 @@ function PdvPage() {
       items: { product_id: string; quantity: number }[];
       payment_method: PaymentMethod;
       customer_name: string;
+      customer_id: string | null;
       operator_id: string;
       discount: number;
       amount_received: number | null;
@@ -224,7 +253,9 @@ function PdvPage() {
       setDiscount("");
       setReceived("");
       setCustomer("");
+      setCustomerId(null);
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["shipping"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
@@ -238,7 +269,20 @@ function PdvPage() {
       toast.error(t("Adicione produtos ao carrinho"));
       return;
     }
-    if (!customer.trim()) {
+    if (payWithBalance && !selectedCustomer) {
+      toast.error(t("Selecione o cliente para pagar com saldo"));
+      return;
+    }
+    if (payWithBalance && balanceShort) {
+      toast.error(
+        t("Saldo insuficiente: {name} tem {balance}", {
+          name: selectedCustomer!.name,
+          balance: brl(selectedCustomer!.balance),
+        }),
+      );
+      return;
+    }
+    if (!payWithBalance && !customer.trim()) {
       toast.error(t("Informe o nome do comprador"));
       return;
     }
@@ -253,7 +297,8 @@ function PdvPage() {
     mutation.mutate({
       items: cart.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
       payment_method: payment,
-      customer_name: customer.trim(),
+      customer_name: payWithBalance ? selectedCustomer!.name : customer.trim(),
+      customer_id: payWithBalance ? selectedCustomer!.id : null,
       operator_id: operatorId,
       discount: discountValue,
       amount_received: payment === "dinheiro" && received ? receivedValue : null,
@@ -266,13 +311,14 @@ function PdvPage() {
     setDiscount("");
     setReceived("");
     setCustomer("");
+    setCustomerId(null);
     setPayment("credito");
     setLastSale(null);
     requestAnimationFrame(focusScanner);
   }
 
-  const shortcutRef = useRef({ finalize, newSale });
-  shortcutRef.current = { finalize, newSale };
+  const shortcutRef = useRef({ finalize, newSale, balanceEnabled });
+  shortcutRef.current = { finalize, newSale, balanceEnabled };
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -285,8 +331,8 @@ function PdvPage() {
       // Use the physical key (e.code): on Mac, Option changes e.key into
       // special characters (¡, ∫, ç, ƒ, dead keys), so e.key never matches.
       const codeMap: Record<string, string> = {
-        Digit1: "1", Digit2: "2", Digit3: "3", Digit4: "4",
-        Numpad1: "1", Numpad2: "2", Numpad3: "3", Numpad4: "4",
+        Digit1: "1", Digit2: "2", Digit3: "3", Digit4: "4", Digit5: "5",
+        Numpad1: "1", Numpad2: "2", Numpad3: "3", Numpad4: "4", Numpad5: "5",
         KeyB: "b", KeyC: "c", KeyF: "f", KeyN: "n",
       };
       const key = codeMap[e.code] ?? e.key.toLowerCase();
@@ -295,6 +341,7 @@ function PdvPage() {
         "2": "debito",
         "3": "pix",
         "4": "dinheiro",
+        ...(shortcutRef.current.balanceEnabled ? { "5": "saldo" as const } : {}),
       };
       if (paymentByKey[key]) {
         e.preventDefault();
@@ -526,7 +573,7 @@ function PdvPage() {
             {t("Forma de pagamento")}
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {PAYMENT_METHODS.map((method, idx) => {
+            {paymentMethods.map((method, idx) => {
               const Icon = paymentIcons[method];
               return (
                 <button
@@ -553,27 +600,42 @@ function PdvPage() {
         </div>
 
 
-        <div className="space-y-2">
-          <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
-            {t("Nome do comprador")} <span className="text-destructive">*</span>{" "}
-            <kbd className="rounded border border-border px-1 text-[10px] normal-case">{t("Alt+C")}</kbd>
-          </Label>
-          <Input
-            id="customer"
-            ref={customerRef}
-
-            required
-            aria-required="true"
-            aria-invalid={!customer.trim()}
-            value={customer}
-            onChange={(e) => setCustomer(e.target.value)}
-            placeholder={t("Quem vai retirar os produtos")}
-            className={cn("h-11", !customer.trim() && "border-destructive/60")}
+        {payWithBalance ? (
+          <CustomerBalancePicker
+            customers={customers}
+            selected={selectedCustomer}
+            search={customer}
+            onSearch={setCustomer}
+            onSelect={(c) => {
+              setCustomerId(c?.id ?? null);
+              setCustomer(c ? c.name : "");
+            }}
+            total={total}
+            inputRef={customerRef}
           />
-          {!customer.trim() && (
-            <p className="text-xs text-destructive">{t("Obrigatório informar o comprador.")}</p>
-          )}
-        </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
+              {t("Nome do comprador")} <span className="text-destructive">*</span>{" "}
+              <kbd className="rounded border border-border px-1 text-[10px] normal-case">{t("Alt+C")}</kbd>
+            </Label>
+            <Input
+              id="customer"
+              ref={customerRef}
+
+              required
+              aria-required="true"
+              aria-invalid={!customer.trim()}
+              value={customer}
+              onChange={(e) => setCustomer(e.target.value)}
+              placeholder={t("Quem vai retirar os produtos")}
+              className={cn("h-11", !customer.trim() && "border-destructive/60")}
+            />
+            {!customer.trim() && (
+              <p className="text-xs text-destructive">{t("Obrigatório informar o comprador.")}</p>
+            )}
+          </div>
+        )}
 
         {payment === "dinheiro" && (
           <div className="space-y-2 rounded-lg border border-border p-3">
@@ -601,7 +663,11 @@ function PdvPage() {
           size="lg"
           className="h-14 text-base font-semibold"
           disabled={
-            cart.length === 0 || mutation.isPending || !operatorId || !customer.trim()
+            cart.length === 0 ||
+            mutation.isPending ||
+            !operatorId ||
+            buyerMissing ||
+            (payWithBalance && balanceShort)
           }
           onClick={finalize}
         >
@@ -616,6 +682,7 @@ function PdvPage() {
           {t(
             "Atalhos: Alt+1 Crédito · Alt+2 Débito · Alt+3 Pix · Alt+4 Dinheiro · Alt+B leitor · Alt+C comprador · Alt+F finalizar · Alt+N nova venda",
           )}
+          {balanceEnabled ? ` · ${t("Alt+5 Saldo")}` : ""}
         </p>
 
         </div>
@@ -668,7 +735,156 @@ function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
             <span className="tabular">{brl(sale.change_amount)}</span>
           </div>
         )}
+        {sale.customer_balance_after != null && (
+          <div className="flex justify-between text-muted-foreground">
+            <span>{t("Saldo restante de {name}", { name: sale.customer_name })}</span>
+            <span className="tabular font-semibold text-foreground">
+              {brl(sale.customer_balance_after)}
+            </span>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function CustomerBalancePicker({
+  customers,
+  selected,
+  search,
+  onSearch,
+  onSelect,
+  total,
+  inputRef,
+}: {
+  customers: Customer[];
+  selected: Customer | null;
+  search: string;
+  onSearch: (value: string) => void;
+  onSelect: (customer: Customer | null) => void;
+  total: number;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+}) {
+  const t = useT();
+  const term = search.trim().toLowerCase();
+  const matches = useMemo(() => {
+    const active = customers.filter((c) => c.active);
+    if (!term) return active.slice(0, 6);
+    return active
+      .filter((c) => c.name.toLowerCase().includes(term) || c.notes.toLowerCase().includes(term))
+      .slice(0, 6);
+  }, [customers, term]);
+
+  if (selected) {
+    const after = selected.balance - total;
+    const short = after < 0;
+    return (
+      <div
+        className={cn(
+          "space-y-2 rounded-lg border-2 p-3",
+          short ? "border-destructive/60 bg-destructive/5" : "border-primary/40",
+        )}
+      >
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              {t("Cliente")}
+            </p>
+            <p className="truncate text-base font-semibold">{selected.name}</p>
+            {selected.notes ? (
+              <p className="truncate text-xs text-muted-foreground">{selected.notes}</p>
+            ) : null}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0 text-muted-foreground"
+            aria-label={t("Trocar cliente")}
+            onClick={() => {
+              onSelect(null);
+              requestAnimationFrame(() => inputRef.current?.focus());
+            }}
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">{t("Saldo disponível")}</span>
+          <span className="tabular text-lg font-bold text-primary">{brl(selected.balance)}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">{t("Saldo após a compra")}</span>
+          <span className={cn("tabular font-semibold", short && "text-destructive")}>
+            {brl(after)}
+          </span>
+        </div>
+        {short ? (
+          <p className="text-xs font-medium text-destructive">
+            {t("Saldo insuficiente. Faltam {value}.", { value: brl(-after) })}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
+        {t("Cliente com saldo")} <span className="text-destructive">*</span>{" "}
+        <kbd className="rounded border border-border px-1 text-[10px] normal-case">{t("Alt+C")}</kbd>
+      </Label>
+      <Input
+        id="customer"
+        ref={inputRef}
+        autoComplete="off"
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && matches.length === 1) {
+            e.preventDefault();
+            onSelect(matches[0]!);
+          }
+        }}
+        placeholder={t("Buscar cliente pelo nome")}
+        className="h-11 border-destructive/60"
+      />
+      {customers.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {t("Nenhum cliente cadastrado.")}{" "}
+          <Link to="/clientes" className="text-primary underline">
+            {t("Cadastrar clientes")}
+          </Link>
+        </p>
+      ) : matches.length === 0 ? (
+        <p className="text-xs text-destructive">{t("Nenhum cliente encontrado.")}</p>
+      ) : (
+        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+          {matches.map((c) => (
+            <li key={c.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(c)}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-secondary"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{c.name}</span>
+                  {c.notes ? (
+                    <span className="block truncate text-xs text-muted-foreground">{c.notes}</span>
+                  ) : null}
+                </span>
+                <span
+                  className={cn(
+                    "tabular shrink-0 font-semibold",
+                    c.balance < total ? "text-destructive" : "text-primary",
+                  )}
+                >
+                  {brl(c.balance)}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

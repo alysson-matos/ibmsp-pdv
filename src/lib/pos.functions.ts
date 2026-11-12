@@ -41,6 +41,10 @@ export type Operator = {
 export type Sale = {
   id: string;
   customer_name: string;
+  /** Registered customer, for sales paid with balance. */
+  customer_id: string | null;
+  /** Only on the sale just made with balance: what the customer has left. */
+  customer_balance_after?: number;
   operator_id: string | null;
   operator_name: string;
   status: SaleStatus;
@@ -65,7 +69,7 @@ export function saleCost(sale: Pick<Sale, "items">): number | null {
   return cost;
 }
 
-export const PAYMENT_METHODS = ["credito", "debito", "pix", "dinheiro"] as const;
+export const PAYMENT_METHODS = ["credito", "debito", "pix", "dinheiro", "saldo"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 const num = (v: unknown) => Number(v ?? 0);
@@ -208,7 +212,8 @@ export const checkout = createServerFn({ method: "POST" })
           .array(z.object({ product_id: z.string().uuid(), quantity: z.number().int().positive() }))
           .min(1, "Carrinho vazio"),
         payment_method: z.enum(PAYMENT_METHODS),
-        customer_name: z.string().trim().min(1, "Informe o nome do comprador"),
+        customer_name: z.string().trim().default(""),
+        customer_id: z.string().uuid().nullable().default(null),
         operator_id: z.string().uuid("Selecione o operador"),
         discount: z.number().min(0).default(0),
         amount_received: z.number().min(0).nullable().default(null),
@@ -227,19 +232,37 @@ export const checkout = createServerFn({ method: "POST" })
       _operator_id: data.operator_id,
       _discount: data.discount,
       ...(data.amount_received != null ? { _amount_received: data.amount_received } : {}),
+      ...(data.payment_method === "saldo" && data.customer_id
+        ? { _customer_id: data.customer_id }
+        : {}),
     };
+    if (data.payment_method === "saldo" && !data.customer_id) {
+      throw new Error("Selecione o cliente para pagar com saldo");
+    }
+    if (data.payment_method !== "saldo" && !data.customer_name) {
+      throw new Error("Informe o nome do comprador");
+    }
 
     const { data: saleId, error } = await supabase.rpc("checkout_sale", args);
     if (error) throw new Error(traduzErro(error.message));
 
-    return await fetchSale(supabase, saleId as unknown as string);
+    const sale = await fetchSale(supabase, saleId as unknown as string);
+    if (sale.customer_id) {
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("balance")
+        .eq("id", sale.customer_id)
+        .single();
+      if (customer) sale.customer_balance_after = num(customer.balance);
+    }
+    return sale;
   });
 
 export const listShipping = createServerFn({ method: "GET" }).handler(async (): Promise<Sale[]> => {
   const { getStoreSupabase } = await import("./pos.server");
   const { supabase, storeId } = await getStoreSupabase("any");
   const columns =
-    "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, unit_cost, quantity, subtotal)";
+    "id, customer_name, customer_id, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, unit_cost, quantity, subtotal)";
 
   // Open orders are always fetched in full so old ones never drop out of the queue;
   // delivered ones are only the most recent, to allow reopening by mistake.
@@ -303,7 +326,7 @@ export const listSales = createServerFn({ method: "GET" })
     let query = supabase
       .from("sales")
       .select(
-        "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, unit_cost, quantity, subtotal)",
+        "id, customer_name, customer_id, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, unit_cost, quantity, subtotal)",
       )
       .eq("store_id", storeId)
       .order("created_at", { ascending: false })
@@ -332,6 +355,7 @@ function mapSale(row: Record<string, unknown>): Sale {
   return {
     id: row["id"] as string,
     customer_name: (row["customer_name"] as string | null) ?? "",
+    customer_id: (row["customer_id"] as string | null) ?? null,
     operator_id: (row["operator_id"] as string | null) ?? null,
     operator_name: (row["operator_name"] as string | null) ?? "",
     status: ((row["status"] as string | null) ?? "pendente") as SaleStatus,
@@ -362,7 +386,7 @@ async function fetchSale(
   const { data, error } = await supabase
     .from("sales")
     .select(
-      "id, customer_name, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, unit_cost, quantity, subtotal)",
+      "id, customer_name, customer_id, operator_id, operator_name, status, delivered_at, subtotal, discount, total, payment_method, amount_received, change_amount, created_at, sale_items(id, product_name, barcode, unit_price, unit_cost, quantity, subtotal)",
     )
     .eq("id", id)
     .single();
@@ -371,6 +395,9 @@ async function fetchSale(
 }
 
 function traduzErro(message: string) {
+  if (message.includes("customers_balance_not_negative")) {
+    return "O saldo do cliente não pode ficar negativo";
+  }
   if (message.includes("duplicate key") && message.includes("barcode")) {
     return "Já existe um produto com esse código de barras";
   }

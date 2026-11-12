@@ -24,6 +24,7 @@ import {
   Store,
   ArrowLeftRight,
   Settings2,
+  Contact,
 } from "lucide-react";
 
 import { getAccess, unlock, lock, selectStore, type Access } from "../lib/gate.functions";
@@ -174,11 +175,12 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 const navItems = [
-  { to: "/", label: "PDV", icon: ScanBarcode, manageOnly: false },
-  { to: "/expedicao", label: "Expedição", icon: PackageCheck, manageOnly: false },
-  { to: "/historico", label: "Histórico", icon: ReceiptText, manageOnly: true },
-  { to: "/inventario", label: "Inventário", icon: Boxes, manageOnly: true },
-  { to: "/operadores", label: "Operadores", icon: Users, manageOnly: true },
+  { to: "/", label: "PDV", icon: ScanBarcode, manageOnly: false, balanceOnly: false },
+  { to: "/expedicao", label: "Expedição", icon: PackageCheck, manageOnly: false, balanceOnly: false },
+  { to: "/historico", label: "Histórico", icon: ReceiptText, manageOnly: true, balanceOnly: false },
+  { to: "/inventario", label: "Inventário", icon: Boxes, manageOnly: true, balanceOnly: false },
+  { to: "/clientes", label: "Clientes", icon: Contact, manageOnly: true, balanceOnly: true },
+  { to: "/operadores", label: "Operadores", icon: Users, manageOnly: true, balanceOnly: false },
 ] as const;
 
 const ADMIN_PATH = "/lojas";
@@ -456,7 +458,14 @@ function RootShellContent() {
   }
 
   const canManage = !!store && store.storeRole !== "operacao";
-  const visibleNav = store ? navItems.filter((item) => canManage || !item.manageOnly) : [];
+  const visibleNav = store
+    ? navItems.filter(
+        (item) =>
+          (canManage || !item.manageOnly) && (store.customer_balance || !item.balanceOnly),
+      )
+    : [];
+  // A user with a single store was sent straight into it; there's nothing to switch to.
+  const canSwitch = isAdmin || access.stores.length > 1;
   const blocked = onAdminPage
     ? !isAdmin
     : !canManage &&
@@ -523,6 +532,7 @@ function RootShellContent() {
                 {roleLabel}
               </span>
 
+              {canSwitch ? (
               <button
                 onClick={leaveStore}
                 title={store ? t("Trocar loja") : t("Escolher loja")}
@@ -533,6 +543,7 @@ function RootShellContent() {
                   {store ? t("Trocar loja") : t("Escolher loja")}
                 </span>
               </button>
+              ) : null}
 
               <SignOutButton onSignOut={signOut} disabled={signingOut} />
             </div>

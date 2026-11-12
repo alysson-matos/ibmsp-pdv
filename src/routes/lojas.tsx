@@ -141,6 +141,7 @@ function LojasPage() {
                   {t(STORE_FONTS[store.font as keyof typeof STORE_FONTS]?.label ?? "Moderna")}
                   {" · "}
                   {store.active ? t("Ativa") : t("Inativa")}
+                  {store.customer_balance ? ` · ${t("Venda com saldo")}` : ""}
                 </p>
               </div>
               <Button
@@ -319,6 +320,7 @@ const EMPTY_STORE: StoreForm = {
   font: "space-grotesk",
   logo: null,
   active: true,
+  customer_balance: false,
   sort_order: 0,
 };
 
@@ -518,6 +520,22 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
                 {t("Sem imagem, usa o logo da igreja na cor da loja.")}
               </span>
             )}
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+          <Switch
+            id="store-balance"
+            checked={form.customer_balance}
+            onCheckedChange={(v) => setForm({ ...form, customer_balance: v })}
+          />
+          <div className="grid gap-1">
+            <Label htmlFor="store-balance">{t("Venda com saldo do cliente")}</Label>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "Permite cadastrar clientes com saldo antecipado e pagar a venda com esse saldo. O saldo nunca fica negativo.",
+              )}
+            </p>
           </div>
         </div>
 

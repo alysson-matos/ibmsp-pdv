@@ -27,7 +27,7 @@ export const adminListStores = createServerFn({ method: "GET" }).handler(
     const supabase = await requireAdmin();
     const { data, error } = await supabase
       .from("stores")
-      .select("id, name, color, font, logo, active, sort_order")
+      .select("id, name, color, font, logo, active, customer_balance, sort_order")
       .order("sort_order")
       .order("name");
     if (error) throw new Error(error.message);
@@ -46,6 +46,7 @@ const storeInput = z.object({
     .max(MAX_LOGO_CHARS, "Imagem muito grande")
     .nullable(),
   active: z.boolean(),
+  customer_balance: z.boolean().default(false),
   sort_order: z.number().int().default(0),
 });
 

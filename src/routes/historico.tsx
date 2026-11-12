@@ -18,6 +18,7 @@ import {
   type PaymentMethod,
 } from "@/lib/pos.functions";
 import { brl, dateTime, PAYMENT_LABEL, todayISO } from "@/lib/format";
+import { useCurrentStore } from "@/lib/use-current-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -121,6 +122,9 @@ function HistoricoPage() {
 
 function SalesTab() {
   const t = useT();
+  const store = useCurrentStore();
+  // "Saldo" only shows for stores that sell with customer balance.
+  const paymentMethods = PAYMENT_METHODS.filter((m) => m !== "saldo" || store?.customer_balance);
   const today = todayISO();
   const [filters, setFilters] = useState<Filters>({
     from: today,
@@ -144,7 +148,7 @@ function SalesTab() {
   const profits = sales.map(profitOf).filter((p): p is number => p != null);
   const profit = profits.reduce((sum, p) => sum + p, 0);
   const withoutCost = sales.length - profits.length;
-  const byMethod = PAYMENT_METHODS.map((m) => ({
+  const byMethod = paymentMethods.map((m) => ({
     method: m,
     total: sales.filter((s) => s.payment_method === m).reduce((sum, s) => sum + s.total, 0),
   }));
@@ -208,7 +212,7 @@ function SalesTab() {
           </select>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {(["todas", ...PAYMENT_METHODS] as const).map((m) => (
+          {(["todas", ...paymentMethods] as const).map((m) => (
             <button
               key={m}
               type="button"
@@ -249,7 +253,12 @@ function SalesTab() {
         />
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-7">
+      <div
+        className={cn(
+          "mt-4 grid gap-3 sm:grid-cols-3",
+          paymentMethods.length > 4 ? "lg:grid-cols-4 xl:grid-cols-8" : "lg:grid-cols-7",
+        )}
+      >
         <SummaryCard label={t("Vendas")} value={String(sales.length)} highlight />
         <SummaryCard label={t("Faturamento")} value={brl(revenue)} highlight />
         <SummaryCard

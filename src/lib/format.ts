@@ -9,6 +9,7 @@ export const PAYMENT_LABEL: Record<string, string> = {
   debito: "Débito",
   credito: "Crédito",
   pix: "Pix",
+  saldo: "Saldo",
 };
 
 export const todayISO = () => {
