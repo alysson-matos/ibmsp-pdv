@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { reportLovableError } from "@/lib/lovable-error-reporting";
+import { restartApp } from "@/lib/restart-app";
 
 const SESSION_EXPIRED = "Sessão expirada";
 
@@ -14,15 +15,13 @@ export function isSessionExpiredError(error: unknown) {
 export function RouteError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   const t = useT();
-  const expired = isSessionExpiredError(error);
+  // A restart refused by the loop guard falls through to the normal error screen.
+  const [restartSkipped, setRestartSkipped] = useState(false);
+  const expired = isSessionExpiredError(error) && !restartSkipped;
 
   useEffect(() => {
     if (expired) {
-      const queryClient = router.options.context.queryClient;
-      void queryClient.cancelQueries().finally(() => {
-        queryClient.clear();
-        void router.invalidate();
-      });
+      if (!restartApp()) setRestartSkipped(true);
       return;
     }
 
@@ -42,10 +41,16 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold text-foreground">{t("Esta página não carregou")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {error instanceof Error ? error.message : String(error)}
+        </p>
         <div className="mt-6 flex justify-center">
           <Button
             onClick={() => {
+              if (isSessionExpiredError(error)) {
+                restartApp({ force: true });
+                return;
+              }
               void router.invalidate();
               reset();
             }}

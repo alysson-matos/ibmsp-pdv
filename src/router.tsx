@@ -2,23 +2,17 @@ import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { routeTree } from "./routeTree.gen";
+import { restartApp } from "./lib/restart-app";
 
 const SESSION_EXPIRED = "Sessão expirada";
 
 export const getRouter = () => {
-  // When the password session expires, clear cached data and reload the root
-  // loader so the unlock screen appears instead of a crashed page.
-  let handlingExpiry = false;
+  // When the session expires (or no longer has the store this page belongs to),
+  // reload from the start so the unlock screen or store picker appears instead of a
+  // crashed page. Invalidating in place loops: see restartApp.
   const onError = (error: unknown) => {
     const msg = error instanceof Error ? error.message : String(error);
-    if (!msg.includes(SESSION_EXPIRED) || handlingExpiry) return;
-    handlingExpiry = true;
-    queryClient.cancelQueries().finally(() => {
-      queryClient.clear();
-      router.invalidate().finally(() => {
-        handlingExpiry = false;
-      });
-    });
+    if (msg.includes(SESSION_EXPIRED)) restartApp();
   };
 
   const queryClient: QueryClient = new QueryClient({

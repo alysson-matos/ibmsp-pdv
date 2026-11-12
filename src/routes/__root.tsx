@@ -35,6 +35,7 @@ import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { LanguageProvider, useI18n, useT, type Lang } from "@/i18n";
 import { ThemeProvider, themeInitScript, useTheme } from "@/hooks/use-theme";
 import { RouteError } from "@/components/route-error";
+import { restartApp } from "@/lib/restart-app";
 import { StoreFonts, StoreLogo, StoreThemeStyle, storeFontStack } from "@/lib/store-theme";
 
 // The logo file is white on transparent; it's used as a mask so it can be painted
@@ -472,11 +473,19 @@ function RootShellContent() {
     }
   }
   const signOut = () => resetSession(setSigningOut, () => lockFn());
-  const leaveStore = () =>
-    resetSession(setLeaving, async () => {
+  // Full reload instead of invalidating in place: the store pages still mounted
+  // would refetch without a store, fail and keep re-invalidating the router.
+  async function leaveStore() {
+    flushSync(() => setLeaving(true));
+    try {
+      await queryClient.cancelQueries();
+      queryClient.clear();
       await selectFn({ data: { storeId: null } });
-      await router.navigate({ to: "/" });
-    });
+    } catch (error) {
+      console.error(error);
+    }
+    restartApp({ force: true });
+  }
 
   if (!access || signingOut) return <UnlockScreen />;
   if (leaving) return <Spinner />;
