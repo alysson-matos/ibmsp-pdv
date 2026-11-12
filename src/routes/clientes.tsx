@@ -9,7 +9,17 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Contact, Pencil, Plus, Minus, ReceiptText, Search, Trash2, UserPlus } from "lucide-react";
+import {
+  Contact,
+  Download,
+  Pencil,
+  Plus,
+  Minus,
+  ReceiptText,
+  Search,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 
 import {
   adjustCustomerBalance,
@@ -37,6 +47,7 @@ import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
 import { prefetchQuiet } from "@/lib/prefetch";
 import { useCurrentStore } from "@/lib/use-current-store";
+import { CustomerImportButton, downloadTemplate } from "@/components/customer-import";
 
 const customersQuery = queryOptions({
   queryKey: ["customers"],
@@ -93,12 +104,24 @@ function ClientesPage() {
             <Contact className="size-6 text-primary" /> {t("Clientes")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t('Clientes com saldo antecipado. Na venda, escolha "Saldo" e identifique o cliente.')}
+            {t(
+              "Clientes com saldo antecipado. Na venda, identifique o cliente e o valor sai do saldo.",
+            )}
           </p>
         </div>
-        <Button className="ml-auto" onClick={() => setEditing({ ...EMPTY_CUSTOMER })}>
-          <UserPlus className="size-4" /> {t("Novo cliente")}
-        </Button>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Button
+            variant="ghost"
+            title={t("Baixar planilha modelo")}
+            onClick={() => void downloadTemplate()}
+          >
+            <Download className="size-4" /> {t("Modelo")}
+          </Button>
+          <CustomerImportButton customers={customers} />
+          <Button onClick={() => setEditing({ ...EMPTY_CUSTOMER })}>
+            <UserPlus className="size-4" /> {t("Novo cliente")}
+          </Button>
+        </div>
       </div>
 
       {store && !store.customer_balance ? (

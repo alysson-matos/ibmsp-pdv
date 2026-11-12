@@ -224,6 +224,16 @@ export const checkout = createServerFn({ method: "POST" })
     const { getStoreSupabase } = await import("./pos.server");
     const { supabase, storeId } = await getStoreSupabase("any");
 
+    // Stores that sell with customer balance take only balance.
+    const { data: store } = await supabase
+      .from("stores")
+      .select("customer_balance")
+      .eq("id", storeId)
+      .single();
+    if (store?.customer_balance && data.payment_method !== "saldo") {
+      throw new Error("Esta loja só aceita pagamento com saldo do cliente");
+    }
+
     const args = {
       _store_id: storeId,
       _items: data.items,

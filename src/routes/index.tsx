@@ -119,13 +119,19 @@ function PdvPage() {
   const checkoutFn = useServerFn(checkout);
   const store = useCurrentStore();
   const balanceEnabled = !!store?.customer_balance;
-  const paymentMethods = PAYMENT_METHODS.filter((m) => m !== "saldo" || balanceEnabled);
+  // Stores that sell with customer balance only take balance; the others never do.
+  const paymentMethods = PAYMENT_METHODS.filter((m) => m !== "saldo");
   const { data: customers = [] } = useQuery({ ...customersQuery, enabled: balanceEnabled });
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [scan, setScan] = useState("");
   const [discount, setDiscount] = useState("");
-  const [payment, setPayment] = useState<PaymentMethod>("credito");
+  const [paymentChoice, setPayment] = useState<PaymentMethod>("credito");
+  const payment: PaymentMethod = balanceEnabled
+    ? "saldo"
+    : paymentChoice === "saldo"
+      ? "credito"
+      : paymentChoice;
   const [received, setReceived] = useState("");
   const [customer, setCustomer] = useState("");
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -331,8 +337,8 @@ function PdvPage() {
       // Use the physical key (e.code): on Mac, Option changes e.key into
       // special characters (¡, ∫, ç, ƒ, dead keys), so e.key never matches.
       const codeMap: Record<string, string> = {
-        Digit1: "1", Digit2: "2", Digit3: "3", Digit4: "4", Digit5: "5",
-        Numpad1: "1", Numpad2: "2", Numpad3: "3", Numpad4: "4", Numpad5: "5",
+        Digit1: "1", Digit2: "2", Digit3: "3", Digit4: "4",
+        Numpad1: "1", Numpad2: "2", Numpad3: "3", Numpad4: "4",
         KeyB: "b", KeyC: "c", KeyF: "f", KeyN: "n",
       };
       const key = codeMap[e.code] ?? e.key.toLowerCase();
@@ -341,9 +347,8 @@ function PdvPage() {
         "2": "debito",
         "3": "pix",
         "4": "dinheiro",
-        ...(shortcutRef.current.balanceEnabled ? { "5": "saldo" as const } : {}),
       };
-      if (paymentByKey[key]) {
+      if (paymentByKey[key] && !shortcutRef.current.balanceEnabled) {
         e.preventDefault();
         setPayment(paymentByKey[key]);
         return;
@@ -568,6 +573,7 @@ function PdvPage() {
           <p className="tabular mt-1 text-4xl font-bold text-primary">{brl(total)}</p>
         </div>
 
+        {!balanceEnabled && (
         <div>
           <p className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
             {t("Forma de pagamento")}
@@ -598,6 +604,7 @@ function PdvPage() {
             })}
           </div>
         </div>
+        )}
 
 
         {payWithBalance ? (
@@ -679,10 +686,11 @@ function PdvPage() {
         </Button>
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          {t(
-            "Atalhos: Alt+1 Crédito · Alt+2 Débito · Alt+3 Pix · Alt+4 Dinheiro · Alt+B leitor · Alt+C comprador · Alt+F finalizar · Alt+N nova venda",
-          )}
-          {balanceEnabled ? ` · ${t("Alt+5 Saldo")}` : ""}
+          {balanceEnabled
+            ? t("Atalhos: Alt+B leitor · Alt+C cliente · Alt+F finalizar · Alt+N nova venda")
+            : t(
+                "Atalhos: Alt+1 Crédito · Alt+2 Débito · Alt+3 Pix · Alt+4 Dinheiro · Alt+B leitor · Alt+C comprador · Alt+F finalizar · Alt+N nova venda",
+              )}
         </p>
 
         </div>
@@ -748,6 +756,16 @@ function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
   );
 }
 
+const MIN_SEARCH = 3;
+
+/** Lowercase without accents, so "joao" finds "João". */
+function normalize(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 function CustomerBalancePicker({
   customers,
   selected,
@@ -766,14 +784,20 @@ function CustomerBalancePicker({
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const t = useT();
-  const term = search.trim().toLowerCase();
+  const term = normalize(search.trim());
+  const [highlight, setHighlight] = useState(0);
+  // Suggestions start at the 3rd letter typed; names starting with the term come first.
   const matches = useMemo(() => {
-    const active = customers.filter((c) => c.active);
-    if (!term) return active.slice(0, 6);
-    return active
-      .filter((c) => c.name.toLowerCase().includes(term) || c.notes.toLowerCase().includes(term))
-      .slice(0, 6);
+    if (term.length < MIN_SEARCH) return [];
+    return customers
+      .filter((c) => c.active)
+      .map((c) => ({ c, name: normalize(c.name), notes: normalize(c.notes) }))
+      .filter(({ name, notes }) => name.includes(term) || notes.includes(term))
+      .sort((a, b) => Number(!a.name.startsWith(term)) - Number(!b.name.startsWith(term)))
+      .slice(0, 8)
+      .map(({ c }) => c);
   }, [customers, term]);
+  const active = Math.min(highlight, Math.max(matches.length - 1, 0));
 
   if (selected) {
     const after = selected.balance - total;
@@ -830,22 +854,34 @@ function CustomerBalancePicker({
   return (
     <div className="space-y-2">
       <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
-        {t("Cliente com saldo")} <span className="text-destructive">*</span>{" "}
+        {t("Cliente")} <span className="text-destructive">*</span>{" "}
         <kbd className="rounded border border-border px-1 text-[10px] normal-case">{t("Alt+C")}</kbd>
       </Label>
       <Input
         id="customer"
         ref={inputRef}
         autoComplete="off"
+        role="combobox"
+        aria-expanded={matches.length > 0}
+        aria-controls="customer-suggestions"
         value={search}
-        onChange={(e) => onSearch(e.target.value)}
+        onChange={(e) => {
+          onSearch(e.target.value);
+          setHighlight(0);
+        }}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && matches.length === 1) {
+          if (e.key === "ArrowDown" && matches.length) {
             e.preventDefault();
-            onSelect(matches[0]!);
+            setHighlight((active + 1) % matches.length);
+          } else if (e.key === "ArrowUp" && matches.length) {
+            e.preventDefault();
+            setHighlight((active - 1 + matches.length) % matches.length);
+          } else if ((e.key === "Enter" || e.key === "Tab") && matches[active]) {
+            e.preventDefault();
+            onSelect(matches[active]);
           }
         }}
-        placeholder={t("Buscar cliente pelo nome")}
+        placeholder={t("Digite o nome do cliente")}
         className="h-11 border-destructive/60"
       />
       {customers.length === 0 ? (
@@ -855,16 +891,29 @@ function CustomerBalancePicker({
             {t("Cadastrar clientes")}
           </Link>
         </p>
+      ) : term.length < MIN_SEARCH ? (
+        <p className="text-xs text-muted-foreground">
+          {t("Digite pelo menos 3 letras para buscar.")}
+        </p>
       ) : matches.length === 0 ? (
         <p className="text-xs text-destructive">{t("Nenhum cliente encontrado.")}</p>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-          {matches.map((c) => (
-            <li key={c.id}>
+        <ul
+          id="customer-suggestions"
+          role="listbox"
+          className="divide-y divide-border overflow-hidden rounded-lg border border-border"
+        >
+          {matches.map((c, idx) => (
+            <li key={c.id} role="option" aria-selected={idx === active}>
               <button
                 type="button"
+                tabIndex={-1}
+                onMouseEnter={() => setHighlight(idx)}
                 onClick={() => onSelect(c)}
-                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-secondary"
+                className={cn(
+                  "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors",
+                  idx === active ? "bg-secondary" : "hover:bg-secondary",
+                )}
               >
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{c.name}</span>

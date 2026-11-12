@@ -20,6 +20,93 @@ export type BalanceMovement = {
 
 const num = (v: unknown) => Number(v ?? 0);
 
+/** Key used to spot the same customer twice (case and extra spaces ignored). */
+export function customerKey(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+export const MAX_IMPORT_ROWS = 5000;
+
+/**
+ * Creates customers from an imported spreadsheet. Names already registered in the
+ * store (or repeated in the file) are skipped. The balance, when given, is recorded
+ * in the statement as the initial balance.
+ */
+export const importCustomers = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        rows: z
+          .array(
+            z.object({
+              name: z.string().trim().min(1).max(80),
+              notes: z.string().trim().max(120).default(""),
+              balance: z.number().min(0).max(99_999_999).default(0),
+            }),
+          )
+          .min(1, "A planilha não tem clientes")
+          .max(MAX_IMPORT_ROWS, `Importe no máximo ${MAX_IMPORT_ROWS} clientes por vez`),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getStoreSupabase } = await import("./pos.server");
+    const { supabase, storeId } = await getStoreSupabase("manage");
+
+    const { data: existing, error: existingError } = await supabase
+      .from("customers")
+      .select("name")
+      .eq("store_id", storeId);
+    if (existingError) throw new Error(existingError.message);
+
+    const seen = new Set((existing ?? []).map((c) => customerKey(c.name)));
+    const fresh = data.rows.filter((row) => {
+      const key = customerKey(row.name);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    let created = 0;
+    for (let i = 0; i < fresh.length; i += 500) {
+      const chunk = fresh.slice(i, i + 500).map((row) => ({
+        store_id: storeId,
+        name: row.name.replace(/\s+/g, " "),
+        notes: row.notes,
+        balance: Math.round(row.balance * 100) / 100,
+      }));
+      const { data: inserted, error } = await supabase
+        .from("customers")
+        .insert(chunk)
+        .select("id, balance");
+      if (error) {
+        throw new Error(
+          created
+            ? `${created} clientes foram importados, mas o restante falhou: ${error.message}`
+            : error.message,
+        );
+      }
+      created += inserted.length;
+
+      const movements = inserted
+        .filter((c) => num(c.balance) > 0)
+        .map((c) => ({
+          customer_id: c.id,
+          delta: num(c.balance),
+          balance_after: num(c.balance),
+          reason: "saldo inicial",
+        }));
+      if (movements.length) {
+        const { error: movementError } = await supabase
+          .from("customer_balance_movements")
+          .insert(movements);
+        if (movementError) throw new Error(movementError.message);
+      }
+    }
+
+    return { created, skipped: data.rows.length - fresh.length };
+  });
+
 function translate(message: string) {
   if (message.includes("customers_balance_not_negative")) {
     return "O saldo do cliente não pode ficar negativo";

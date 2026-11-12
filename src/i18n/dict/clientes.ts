@@ -7,9 +7,6 @@ export const CLIENTES: Record<string, string> = {
 
   // PDV
   Saldo: "Balance",
-  "Alt+5 Saldo": "Alt+5 Balance",
-  "Cliente com saldo": "Customer with balance",
-  "Buscar cliente pelo nome": "Search customer by name",
   "Nenhum cliente cadastrado.": "No customers registered.",
   "Cadastrar clientes": "Register customers",
   "Nenhum cliente encontrado.": "No customer found.",
@@ -24,8 +21,6 @@ export const CLIENTES: Record<string, string> = {
 
   // Customers page
   Clientes: "Customers",
-  'Clientes com saldo antecipado. Na venda, escolha "Saldo" e identifique o cliente.':
-    'Customers with prepaid balance. At checkout, choose "Balance" and identify the customer.',
   "Novo cliente": "New customer",
   "Editar cliente": "Edit customer",
   "A venda com saldo está desligada nesta loja. O administrador pode ligá-la em Lojas > editar loja.":
@@ -60,4 +55,39 @@ export const CLIENTES: Record<string, string> = {
   Compra: "Purchase",
   Ajuste: "Adjustment",
   "Saldo inicial": "Initial balance",
+
+  // PDV customer search and import
+  "Atalhos: Alt+B leitor · Alt+C cliente · Alt+F finalizar · Alt+N nova venda":
+    "Shortcuts: Alt+B scanner · Alt+C customer · Alt+F finish · Alt+N new sale",
+  "Digite o nome do cliente": "Type the customer's name",
+  "Digite pelo menos 3 letras para buscar.": "Type at least 3 letters to search.",
+  "Clientes com saldo antecipado. Na venda, identifique o cliente e o valor sai do saldo.":
+    "Customers with prepaid balance. At checkout, identify the customer and the amount comes out of the balance.",
+  Modelo: "Template",
+  "Baixar planilha modelo": "Download template spreadsheet",
+  "Baixar modelo": "Download template",
+  "Importar Excel": "Import Excel",
+  "Lendo...": "Reading...",
+  "Nenhum nome encontrado na planilha.": "No names found in the spreadsheet.",
+  "Não foi possível ler o arquivo. Use uma planilha .xlsx, .xls ou .csv.":
+    "Couldn't read the file. Use an .xlsx, .xls or .csv spreadsheet.",
+  "Importar clientes": "Import customers",
+  "Só o nome é obrigatório. Colunas reconhecidas: Nome, Saldo e Observação (ou Telefone).":
+    "Only the name is required. Recognized columns: Name, Balance and Note (or Phone).",
+  "Serão importados": "Will be imported",
+  "Saldo somado": "Total balance",
+  Ignorados: "Skipped",
+  "Importe no máximo {n} clientes por vez.": "Import at most {n} customers at a time.",
+  Linha: "Row",
+  Situação: "Status",
+  "Saldo inválido": "Invalid balance",
+  "Repetido na planilha": "Repeated in the file",
+  "Já cadastrado": "Already registered",
+  OK: "OK",
+  "Mostrando 300 de {n} linhas.": "Showing 300 of {n} rows.",
+  "Importando...": "Importing...",
+  "Importar {n} clientes": "Import {n} customers",
+  "{n} clientes importados": "{n} customers imported",
+  "{n} clientes importados ({skipped} já existiam)":
+    "{n} customers imported ({skipped} already existed)",
 };
