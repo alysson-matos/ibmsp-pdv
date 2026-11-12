@@ -253,7 +253,7 @@ function UnlockScreen() {
           className={inputClass}
         />
         <p className="mt-2 text-xs text-muted-foreground">
-          {t("Administrador: deixe o usuário em branco e use a senha de admin.")}
+          {t("Administrador: digite o usuário admin e a senha de admin.")}
         </p>
         {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
         <button

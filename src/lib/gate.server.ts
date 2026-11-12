@@ -82,13 +82,13 @@ export function verifyPassword(password: string, stored: string) {
 
 export const ADMIN_USERNAME = "admin";
 
-/** Checks the credentials. An empty user name (or "admin") means the admin password. */
+/** Checks the credentials. The user name "admin" means the admin password. */
 export async function resolveLogin(
   username: string,
   password: string,
 ): Promise<Pick<GateSession, "role" | "userId" | "userName"> | null> {
   const name = username.trim().toLowerCase();
-  if (!name || name === ADMIN_USERNAME) {
+  if (name === ADMIN_USERNAME) {
     return matches(password, process.env["ADMIN_PASSWORD"])
       ? { role: "admin", userName: "Administrador" }
       : null;
