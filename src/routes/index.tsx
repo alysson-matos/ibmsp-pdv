@@ -714,7 +714,7 @@ function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
       <p className="mt-2 text-sm text-muted-foreground">
         {t("Comprador")}: <span className="font-semibold text-foreground">{sale.customer_name}</span> ·{" "}
         {t("Operador")}: <span className="font-semibold text-foreground">{sale.operator_name || "—"}</span> ·{" "}
-        {t("retirada na expedição")}
+        {sale.status === "entregue" ? t("entregue ao cliente") : t("retirada na expedição")}
       </p>
       <ul className="mt-3 space-y-1 text-sm">
         {sale.items.map((item) => (

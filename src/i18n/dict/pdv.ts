@@ -44,5 +44,6 @@ export const PDV: Record<string, string> = {
   "Venda registrada": "Sale registered",
   "Nova venda": "New sale",
   "retirada na expedição": "pickup at shipping",
+  "entregue ao cliente": "handed to the customer",
   "Recebido {value} · Troco": "Received {value} · Change",
 };

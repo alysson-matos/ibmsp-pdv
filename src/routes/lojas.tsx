@@ -142,6 +142,7 @@ function LojasPage() {
                   {" · "}
                   {store.active ? t("Ativa") : t("Inativa")}
                   {store.customer_balance ? ` · ${t("Venda com saldo")}` : ""}
+                  {store.skip_shipping ? ` · ${t("Sem expedição")}` : ""}
                 </p>
               </div>
               <Button
@@ -321,6 +322,7 @@ const EMPTY_STORE: StoreForm = {
   logo: null,
   active: true,
   customer_balance: false,
+  skip_shipping: false,
   sort_order: 0,
 };
 
@@ -534,6 +536,22 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
             <p className="text-xs text-muted-foreground">
               {t(
                 "Permite cadastrar clientes com saldo antecipado e pagar a venda com esse saldo. O saldo nunca fica negativo.",
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+          <Switch
+            id="store-skip-shipping"
+            checked={form.skip_shipping}
+            onCheckedChange={(v) => setForm({ ...form, skip_shipping: v })}
+          />
+          <div className="grid gap-1">
+            <Label htmlFor="store-skip-shipping">{t("Sem expedição")}</Label>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "Venda direta: o cliente já sai com o produto na mão. A venda é registrada como entregue e o módulo Expedição fica oculto.",
               )}
             </p>
           </div>

@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
 import { prefetchQuiet } from "@/lib/prefetch";
+import { useCurrentStore } from "@/lib/use-current-store";
 
 const shippingQuery = queryOptions({
   queryKey: ["shipping"],
@@ -81,6 +82,7 @@ function matches(sale: Sale, term: string) {
 
 function ExpedicaoPage() {
   const t = useT();
+  const store = useCurrentStore();
   const queryClient = useQueryClient();
   // New orders from the PDV show up on their own. Polling pauses while a card is
   // being moved so a reload can't undo the move before the server saves it.
@@ -144,6 +146,13 @@ function ExpedicaoPage() {
 
   return (
     <main className="mx-auto max-w-[1600px] space-y-4 p-4">
+      {store?.skip_shipping ? (
+        <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
+          {t(
+            "Esta loja está marcada como Sem expedição: as vendas já saem entregues. O administrador pode mudar isso em Lojas > editar loja.",
+          )}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">{t("Expedição")}</h1>

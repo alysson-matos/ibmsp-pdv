@@ -99,7 +99,6 @@ function LanguageSwitcher() {
   );
 }
 
-
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -175,12 +174,54 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 const navItems = [
-  { to: "/", label: "PDV", icon: ScanBarcode, manageOnly: false, balanceOnly: false },
-  { to: "/expedicao", label: "Expedição", icon: PackageCheck, manageOnly: false, balanceOnly: false },
-  { to: "/historico", label: "Histórico", icon: ReceiptText, manageOnly: true, balanceOnly: false },
-  { to: "/inventario", label: "Inventário", icon: Boxes, manageOnly: true, balanceOnly: false },
-  { to: "/clientes", label: "Clientes", icon: Contact, manageOnly: true, balanceOnly: true },
-  { to: "/operadores", label: "Operadores", icon: Users, manageOnly: true, balanceOnly: false },
+  {
+    to: "/",
+    label: "PDV",
+    icon: ScanBarcode,
+    manageOnly: false,
+    balanceOnly: false,
+    shippingOnly: false,
+  },
+  {
+    to: "/expedicao",
+    label: "Expedição",
+    icon: PackageCheck,
+    manageOnly: false,
+    balanceOnly: false,
+    shippingOnly: true,
+  },
+  {
+    to: "/historico",
+    label: "Histórico",
+    icon: ReceiptText,
+    manageOnly: true,
+    balanceOnly: false,
+    shippingOnly: false,
+  },
+  {
+    to: "/inventario",
+    label: "Inventário",
+    icon: Boxes,
+    manageOnly: true,
+    balanceOnly: false,
+    shippingOnly: false,
+  },
+  {
+    to: "/clientes",
+    label: "Clientes",
+    icon: Contact,
+    manageOnly: true,
+    balanceOnly: true,
+    shippingOnly: false,
+  },
+  {
+    to: "/operadores",
+    label: "Operadores",
+    icon: Users,
+    manageOnly: true,
+    balanceOnly: false,
+    shippingOnly: false,
+  },
 ] as const;
 
 const ADMIN_PATH = "/lojas";
@@ -458,15 +499,16 @@ function RootShellContent() {
   const visibleNav = store
     ? navItems.filter(
         (item) =>
-          (canManage || !item.manageOnly) && (store.customer_balance || !item.balanceOnly),
+          (canManage || !item.manageOnly) &&
+          (store.customer_balance || !item.balanceOnly) &&
+          (!store.skip_shipping || !item.shippingOnly),
       )
     : [];
   // A user with a single store was sent straight into it; there's nothing to switch to.
   const canSwitch = isAdmin || access.stores.length > 1;
   const blocked = onAdminPage
     ? !isAdmin
-    : !canManage &&
-      navItems.some((item) => item.manageOnly && currentPath.startsWith(item.to));
+    : !canManage && navItems.some((item) => item.manageOnly && currentPath.startsWith(item.to));
 
   const roleLabel = isAdmin
     ? t("Admin")
@@ -530,16 +572,16 @@ function RootShellContent() {
               </span>
 
               {canSwitch ? (
-              <button
-                onClick={leaveStore}
-                title={store ? t("Trocar loja") : t("Escolher loja")}
-                className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              >
-                <ArrowLeftRight className="size-3.5" />
-                <span className="hidden sm:inline">
-                  {store ? t("Trocar loja") : t("Escolher loja")}
-                </span>
-              </button>
+                <button
+                  onClick={leaveStore}
+                  title={store ? t("Trocar loja") : t("Escolher loja")}
+                  className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <ArrowLeftRight className="size-3.5" />
+                  <span className="hidden sm:inline">
+                    {store ? t("Trocar loja") : t("Escolher loja")}
+                  </span>
+                </button>
               ) : null}
 
               <SignOutButton onSignOut={signOut} disabled={signingOut} />

@@ -14,6 +14,8 @@ export type StoreTheme = {
   active: boolean;
   /** Sales can be paid with a balance loaded in advance for registered customers. */
   customer_balance: boolean;
+  /** Direct sale: the customer leaves with the product, so there is no Expedição queue. */
+  skip_shipping: boolean;
 };
 
 export type Access = {
@@ -25,7 +27,7 @@ export type Access = {
   store: (StoreTheme & { storeRole: StoreRole }) | null;
 };
 
-const STORE_COLUMNS = "id, name, color, font, logo, active, customer_balance";
+const STORE_COLUMNS = "id, name, color, font, logo, active, customer_balance, skip_shipping";
 
 export const getAccess = createServerFn({ method: "GET" }).handler(async (): Promise<Access | null> => {
   const { getGateSession, serviceSupabase, storeRoleFor } = await import("./gate.server");

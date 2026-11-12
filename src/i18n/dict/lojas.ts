@@ -24,6 +24,9 @@ export const LOJAS: Record<string, string> = {
   "Cada loja tem seus próprios produtos, operadores, vendas e visual.":
     "Each store has its own products, operators, sales and look.",
   "Nova loja": "New store",
+  "Sem expedição": "No shipping",
+  "Venda direta: o cliente já sai com o produto na mão. A venda é registrada como entregue e o módulo Expedição fica oculto.":
+    "Direct sale: the customer leaves with the product in hand. The sale is recorded as delivered and the Shipping module is hidden.",
   "Editar loja": "Edit store",
   Ativa: "Active",
   Inativa: "Inactive",

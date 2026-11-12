@@ -3,6 +3,8 @@ export const EXPEDICAO: Record<string, string> = {
   "A separar": "To pack",
   Separado: "Packed",
   Entregues: "Delivered",
+  "Esta loja está marcada como Sem expedição: as vendas já saem entregues. O administrador pode mudar isso em Lojas > editar loja.":
+    "This store is set to No shipping: sales are delivered right away. The administrator can change this in Stores > edit store.",
   "Buscar por comprador, produto ou código": "Search by customer, product or code",
   "Nenhuma compra nesta lista.": "No orders in this list.",
   "Sem nome": "No name",

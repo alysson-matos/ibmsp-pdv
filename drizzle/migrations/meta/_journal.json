@@ -36,6 +36,13 @@
       "when": 1794448000001,
       "tag": "0004_finalize_pending_customer_balance_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794500000000,
+      "tag": "0005_lojas_sem_expedicao",
+      "breakpoints": true
     }
   ]
 }
