@@ -429,7 +429,6 @@ export type Database = {
           color: string
           created_at: string
           customer_balance: boolean
-          skip_shipping: boolean
           font: string
           id: string
           logo: string | null
@@ -442,7 +441,6 @@ export type Database = {
           color?: string
           created_at?: string
           customer_balance?: boolean
-          skip_shipping?: boolean
           font?: string
           id?: string
           logo?: string | null
@@ -455,7 +453,6 @@ export type Database = {
           color?: string
           created_at?: string
           customer_balance?: boolean
-          skip_shipping?: boolean
           font?: string
           id?: string
           logo?: string | null
