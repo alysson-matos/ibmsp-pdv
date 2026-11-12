@@ -3,8 +3,8 @@ export const LOJAS: Record<string, string> = {
   "Entre com seu usuário e senha.": "Sign in with your user name and password.",
   Usuário: "User",
   "Usuário ou senha incorretos.": "Incorrect user name or password.",
-  "Administrador: deixe o usuário em branco e use a senha de admin.":
-    "Administrator: leave the user empty and use the admin password.",
+  "Administrador: digite o usuário admin e a senha de admin.":
+    "Administrator: type the user name admin and the admin password.",
   "Escolha a loja": "Choose the store",
   "Olá, {name}. Em qual loja você vai trabalhar agora?":
     "Hi, {name}. Which store are you working at now?",
