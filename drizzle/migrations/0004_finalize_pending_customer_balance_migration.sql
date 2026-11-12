@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_customers_store ON public.customers (store_id, name);

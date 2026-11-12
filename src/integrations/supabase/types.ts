@@ -44,6 +44,92 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_balance_movements: {
+        Row: {
+          balance_after: number
+          created_at: string
+          customer_id: string
+          delta: number
+          id: string
+          reason: string
+          sale_id: string | null
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string
+          customer_id: string
+          delta: number
+          id?: string
+          reason?: string
+          sale_id?: string | null
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string
+          customer_id?: string
+          delta?: number
+          id?: string
+          reason?: string
+          sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_balance_movements_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_balance_movements_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          active: boolean
+          balance: number
+          created_at: string
+          id: string
+          name: string
+          notes: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          balance?: number
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          balance?: number
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operators: {
         Row: {
           active: boolean
@@ -188,6 +274,7 @@ export type Database = {
           amount_received: number | null
           change_amount: number
           created_at: string
+          customer_id: string | null
           customer_name: string
           delivered_at: string | null
           discount: number
@@ -204,6 +291,7 @@ export type Database = {
           amount_received?: number | null
           change_amount?: number
           created_at?: string
+          customer_id?: string | null
           customer_name?: string
           delivered_at?: string | null
           discount?: number
@@ -220,6 +308,7 @@ export type Database = {
           amount_received?: number | null
           change_amount?: number
           created_at?: string
+          customer_id?: string | null
           customer_name?: string
           delivered_at?: string | null
           discount?: number
@@ -233,6 +322,13 @@ export type Database = {
           total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sales_operator_id_fkey"
             columns: ["operator_id"]
@@ -332,6 +428,7 @@ export type Database = {
           active: boolean
           color: string
           created_at: string
+          customer_balance: boolean
           font: string
           id: string
           logo: string | null
@@ -343,6 +440,7 @@ export type Database = {
           active?: boolean
           color?: string
           created_at?: string
+          customer_balance?: boolean
           font?: string
           id?: string
           logo?: string | null
@@ -354,6 +452,7 @@ export type Database = {
           active?: boolean
           color?: string
           created_at?: string
+          customer_balance?: boolean
           font?: string
           id?: string
           logo?: string | null
@@ -368,9 +467,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_customer_balance: {
+        Args: {
+          _customer_id: string
+          _delta: number
+          _reason?: string
+          _store_id: string
+        }
+        Returns: number
+      }
       checkout_sale: {
         Args: {
           _amount_received?: number
+          _customer_id?: string
           _customer_name?: string
           _discount?: number
           _items: Json
