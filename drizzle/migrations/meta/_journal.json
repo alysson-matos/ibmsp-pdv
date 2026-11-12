@@ -15,6 +15,13 @@
       "when": 1794355200000,
       "tag": "0001_lojas",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794444379169,
+      "tag": "0002_finalize_pending_store_migration",
+      "breakpoints": true
     }
   ]
 }

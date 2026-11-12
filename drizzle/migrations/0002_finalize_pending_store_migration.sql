@@ -1,0 +1,1 @@
+COMMENT ON FUNCTION public.checkout_sale(uuid, jsonb, text, text, uuid, numeric, numeric) IS 'Creates a sale within one store, validating that its operator and products belong to that store; executable only by service_role.';
