@@ -16,6 +16,8 @@ export type StoreTheme = {
   customer_balance: boolean;
   /** Direct sale: the customer leaves with the product, so there is no Expedição queue. */
   skip_shipping: boolean;
+  /** Retro desktop look (Windows 95 window) instead of the default one. */
+  retro_look: boolean;
 };
 
 export type Access = {
@@ -27,7 +29,25 @@ export type Access = {
   store: (StoreTheme & { storeRole: StoreRole }) | null;
 };
 
-const STORE_COLUMNS = "id, name, color, font, logo, active, customer_balance, skip_shipping";
+// "*" instead of a column list: a column whose migration hasn't been applied yet
+// (retro_look) then reads as off instead of breaking the login for everyone.
+const STORE_COLUMNS = "*";
+
+type StoreRow = Omit<StoreTheme, "retro_look"> & { retro_look?: boolean | null };
+
+export function toStoreTheme(row: StoreRow): StoreTheme {
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color,
+    font: row.font,
+    logo: row.logo,
+    active: row.active,
+    customer_balance: row.customer_balance,
+    skip_shipping: row.skip_shipping,
+    retro_look: row.retro_look === true,
+  };
+}
 
 export const getAccess = createServerFn({ method: "GET" }).handler(async (): Promise<Access | null> => {
   const { getGateSession, serviceSupabase, storeRoleFor } = await import("./gate.server");
@@ -45,7 +65,7 @@ export const getAccess = createServerFn({ method: "GET" }).handler(async (): Pro
       .order("sort_order")
       .order("name");
     if (error) throw new Error(error.message);
-    stores = rows ?? [];
+    stores = (rows ?? []).map(toStoreTheme);
   } else {
     const { data: user } = await supabase
       .from("app_users")
@@ -59,14 +79,14 @@ export const getAccess = createServerFn({ method: "GET" }).handler(async (): Pro
     }
     const { data: rows, error } = await supabase
       .from("store_members")
-      .select(`stores!inner(${STORE_COLUMNS}, sort_order)`)
+      .select(`stores!inner(${STORE_COLUMNS})`)
       .eq("user_id", data.userId ?? "")
       .eq("stores.active", true);
     if (error) throw new Error(error.message);
     stores = (rows ?? [])
-      .map((r) => r.stores as unknown as StoreTheme & { sort_order: number })
+      .map((r) => r.stores as unknown as StoreRow & { sort_order: number })
       .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
-      .map(({ sort_order: _ignored, ...store }) => store);
+      .map(toStoreTheme);
   }
 
   // A user with a single store goes straight into it (no picker, no switching).

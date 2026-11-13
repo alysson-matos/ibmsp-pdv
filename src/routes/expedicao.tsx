@@ -34,6 +34,7 @@ import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
 import { prefetchQuiet } from "@/lib/prefetch";
 import { useCurrentStore } from "@/lib/use-current-store";
+import { useRetro } from "@/lib/retro";
 
 const shippingQuery = queryOptions({
   queryKey: ["shipping"],
@@ -81,6 +82,7 @@ function matches(sale: Sale, term: string) {
 }
 
 function ExpedicaoPage() {
+  const retro = useRetro();
   const t = useT();
   const store = useCurrentStore();
   const queryClient = useQueryClient();
@@ -145,9 +147,15 @@ function ExpedicaoPage() {
   }, [sales, search]);
 
   return (
-    <main className="mx-auto max-w-[1600px] space-y-4 p-4">
+    <main className={retro ? "w-full space-y-4" : "mx-auto max-w-[1600px] space-y-4 p-4"}>
       {store?.skip_shipping ? (
-        <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
+        <p
+          className={
+            retro
+              ? "border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm"
+              : "rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm"
+          }
+        >
           {t(
             "Esta loja está marcada como Sem expedição: as vendas já saem entregues. O administrador pode mudar isso em Lojas > editar loja.",
           )}
@@ -206,7 +214,7 @@ function ExpedicaoPage() {
         />
       </div>
 
-      <section className="rounded-xl border border-border bg-card">
+      <section className={retro ? "panel" : "rounded-xl border border-border bg-card"}>
         <button
           type="button"
           onClick={() => setShowDelivered((v) => !v)}
@@ -258,6 +266,12 @@ const toneStyle = {
   accent: { bar: "border-t-accent", icon: "text-accent", badge: "bg-accent/15 text-accent" },
 } as const;
 
+const retroToneStyle: Record<keyof typeof toneStyle, { bar: string; icon: string; badge: string }> =
+  {
+    primary: { bar: "border-t-primary", icon: "text-navy", badge: "pill info" },
+    accent: { bar: "border-t-accent", icon: "text-accent", badge: "pill ok" },
+  };
+
 function QueueColumn({
   title,
   icon: Icon,
@@ -271,12 +285,15 @@ function QueueColumn({
   sales: Sale[];
   renderActions: (sale: Sale) => React.ReactNode;
 }) {
+  const retro = useRetro();
   const t = useT();
-  const style = toneStyle[tone];
+  const style = (retro ? retroToneStyle : toneStyle)[tone];
   return (
     <section
       className={cn(
-        "flex flex-col rounded-xl border border-t-4 border-border bg-secondary/30",
+        retro
+          ? "flex flex-col border border-t-4 border-border bg-secondary/30"
+          : "flex flex-col rounded-xl border border-t-4 border-border bg-secondary/30",
         style.bar,
       )}
     >
@@ -321,16 +338,23 @@ function QueueCard({
   position: number;
   children: React.ReactNode;
 }) {
+  const retro = useRetro();
   const t = useT();
   return (
-    <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
+    <article
+      className={
+        retro ? "panel p-4 shadow-sm" : "rounded-lg border border-border bg-card p-4 shadow-sm"
+      }
+    >
       <div className="flex items-start gap-3">
         <span className="tabular grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-xs font-bold text-muted-foreground">
           {position}
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 truncate text-base font-semibold">
-            <User className="size-4 shrink-0 text-primary" />
+            <User
+              className={retro ? "size-4 shrink-0 text-navy" : "size-4 shrink-0 text-primary"}
+            />
             {sale.customer_name || t("Sem nome")}
           </p>
           <p className="tabular text-xs text-muted-foreground">
@@ -345,7 +369,13 @@ function QueueCard({
           <li key={item.id} className="flex items-start justify-between gap-3">
             <span className="min-w-0">
               <span className="block truncate">
-                <span className="tabular font-semibold text-primary">{item.quantity}×</span>{" "}
+                <span
+                  className={
+                    retro ? "tabular font-semibold text-navy" : "tabular font-semibold text-primary"
+                  }
+                >
+                  {item.quantity}×
+                </span>{" "}
                 {item.product_name}
               </span>
               <span className="tabular block text-xs text-muted-foreground">

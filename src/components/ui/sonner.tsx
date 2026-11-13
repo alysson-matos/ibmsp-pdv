@@ -1,11 +1,23 @@
 import { Toaster as Sonner } from "sonner";
 
 import { useTheme } from "@/hooks/use-theme";
+import { useRetro } from "@/lib/retro";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme } = useTheme();
+  // Retro look: ink box with a yellow (or red, on error) frame (.ztoast in styles.css).
+  if (useRetro()) {
+    return (
+      <Sonner
+        theme="light"
+        className="toaster group"
+        toastOptions={{ unstyled: true, classNames: { toast: "ztoast" } }}
+        {...props}
+      />
+    );
+  }
   return (
     <Sonner
       theme={theme}

@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  queryOptions,
   useMutation,
   useQuery,
   useQueryClient,
@@ -42,26 +41,18 @@ import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
 import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
 import { prefetchQuiet } from "@/lib/prefetch";
-import { listCustomers, type Customer } from "@/lib/customers.functions";
+import { type Customer } from "@/lib/customers.functions";
+import {
+  customersQuery,
+  operatorsQuery,
+  OPERATOR_STORAGE_KEY,
+  productsQuery,
+} from "@/lib/pdv-queries";
+import { useRetro } from "@/lib/retro";
+import { PdvRetro } from "@/components/pdv/pdv-retro";
 import { useCurrentStore } from "@/lib/use-current-store";
 
 
-const productsQuery = queryOptions({
-  queryKey: ["products"],
-  queryFn: () => listProducts(),
-});
-
-const operatorsQuery = queryOptions({
-  queryKey: ["operators"],
-  queryFn: () => listOperators(),
-});
-
-const customersQuery = queryOptions({
-  queryKey: ["customers"],
-  queryFn: () => listCustomers(),
-});
-
-const OPERATOR_STORAGE_KEY = "pdv:operator-id";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -111,7 +102,12 @@ const paymentIcons: Record<PaymentMethod, typeof Banknote> = {
   saldo: PiggyBank,
 };
 
+/** Stores with "Visual retrô" get the register from the retro look. */
 function PdvPage() {
+  return useRetro() ? <PdvRetro /> : <PdvClassic />;
+}
+
+function PdvClassic() {
   const t = useT();
   const { data: products } = useSuspenseQuery(productsQuery);
   const { data: operators } = useSuspenseQuery(operatorsQuery);

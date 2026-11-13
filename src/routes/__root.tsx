@@ -3,6 +3,7 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  useLocation,
   useRouter,
   HeadContent,
   Scripts,
@@ -37,6 +38,13 @@ import { ThemeProvider, themeInitScript, useTheme } from "@/hooks/use-theme";
 import { RouteError } from "@/components/route-error";
 import { restartApp } from "@/lib/restart-app";
 import { StoreFonts, StoreLogo, StoreThemeStyle, storeFontStack } from "@/lib/store-theme";
+import { useRetro } from "@/lib/retro";
+import {
+  RetroAccessDenied,
+  RetroNotFound,
+  RetroShell,
+  type RetroMenuItem,
+} from "@/components/retro-shell";
 
 // The logo file is white on transparent; it's used as a mask so it can be painted
 // in the church color (#64a99c) and stay visible in both light and dark mode.
@@ -101,6 +109,8 @@ function LanguageSwitcher() {
 }
 
 function NotFoundComponent() {
+  // A store with the retro look shows it inside its window.
+  if (useRetro()) return <RetroNotFound />;
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -179,6 +189,7 @@ const navItems = [
     to: "/",
     label: "PDV",
     icon: ScanBarcode,
+    sprite: "cart",
     manageOnly: false,
     balanceOnly: false,
     shippingOnly: false,
@@ -187,6 +198,7 @@ const navItems = [
     to: "/expedicao",
     label: "Expedição",
     icon: PackageCheck,
+    sprite: "box",
     manageOnly: false,
     balanceOnly: false,
     shippingOnly: true,
@@ -195,6 +207,7 @@ const navItems = [
     to: "/historico",
     label: "Histórico",
     icon: ReceiptText,
+    sprite: "chart",
     manageOnly: true,
     balanceOnly: false,
     shippingOnly: false,
@@ -203,6 +216,7 @@ const navItems = [
     to: "/inventario",
     label: "Inventário",
     icon: Boxes,
+    sprite: "shelf",
     manageOnly: true,
     balanceOnly: false,
     shippingOnly: false,
@@ -211,6 +225,7 @@ const navItems = [
     to: "/clientes",
     label: "Clientes",
     icon: Contact,
+    sprite: "coin",
     manageOnly: true,
     balanceOnly: true,
     shippingOnly: false,
@@ -219,6 +234,7 @@ const navItems = [
     to: "/operadores",
     label: "Operadores",
     icon: Users,
+    sprite: "kid",
     manageOnly: true,
     balanceOnly: false,
     shippingOnly: false,
@@ -451,6 +467,7 @@ function RootShellContent() {
   const { queryClient } = Route.useRouteContext();
   const access = Route.useLoaderData() as Access | null;
   const router = useRouter();
+  const pathname = useLocation({ select: (l) => l.pathname });
   const t = useT();
   const lockFn = useServerFn(lock);
   const selectFn = useServerFn(selectStore);
@@ -492,7 +509,7 @@ function RootShellContent() {
 
   const isAdmin = access.role === "admin";
   const store = access.store;
-  const currentPath = router.state.location.pathname;
+  const currentPath = pathname;
   const onAdminPage = currentPath.startsWith(ADMIN_PATH);
 
   if (!store && !(isAdmin && onAdminPage)) {
@@ -524,6 +541,44 @@ function RootShellContent() {
     : store?.storeRole === "gerente"
       ? t("Gerente")
       : t("Operação");
+
+  if (store?.retro_look) {
+    const tabs = [
+      ...visibleNav.map((item) => ({ to: item.to, label: t(item.label), sprite: item.sprite })),
+      ...(isAdmin ? [{ to: ADMIN_PATH, label: t("Lojas"), sprite: "shop" }] : []),
+    ];
+    const items: RetroMenuItem[] = [
+      ...tabs.map((tab) => ({ kind: "link" as const, ...tab })),
+      { kind: "sep" },
+      ...(canSwitch
+        ? [
+            {
+              kind: "action" as const,
+              label: t("Trocar loja"),
+              sprite: "disk",
+              onClick: leaveStore,
+            },
+          ]
+        : []),
+      { kind: "action", label: t("Sair"), sprite: "key", onClick: signOut },
+    ];
+    return (
+      <QueryClientProvider client={queryClient}>
+        <RetroShell
+          store={store}
+          userName={access.userName}
+          roleLabel={roleLabel}
+          pathname={pathname}
+          tabs={tabs}
+          items={items}
+          toaster={<Toaster position="top-center" />}
+        >
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          {blocked ? <RetroAccessDenied /> : <Outlet />}
+        </RetroShell>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
 import { prefetchQuiet } from "@/lib/prefetch";
+import { useRetro } from "@/lib/retro";
 
 const storesQuery = queryOptions({
   queryKey: ["admin-stores"],
@@ -86,6 +87,7 @@ const PRESET_COLORS = [
 ];
 
 function LojasPage() {
+  const retro = useRetro();
   const t = useT();
   const { data: stores } = useSuspenseQuery(storesQuery);
   const { data: users } = useSuspenseQuery(usersQuery);
@@ -93,14 +95,14 @@ function LojasPage() {
   const [editingUser, setEditingUser] = useState<UserForm | null>(null);
 
   return (
-    <main className="mx-auto max-w-6xl p-4">
+    <main className={retro ? "w-full" : "mx-auto max-w-6xl p-4"}>
       <StoreFonts fonts={stores.map((s) => s.font)} />
 
       <section>
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold">
-              <Store className="size-6 text-primary" /> {t("Lojas")}
+              <Store className={retro ? "size-6 text-navy" : "size-6 text-primary"} /> {t("Lojas")}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {t("Cada loja tem seus próprios produtos, operadores, vendas e visual.")}
@@ -119,7 +121,9 @@ function LojasPage() {
             <div
               key={store.id}
               className={cn(
-                "relative flex items-center gap-4 overflow-hidden rounded-xl border-2 bg-card p-4 pt-5",
+                retro
+                  ? "relative flex items-center gap-4 overflow-hidden border-2 bg-card p-4 pt-5"
+                  : "relative flex items-center gap-4 overflow-hidden rounded-xl border-2 bg-card p-4 pt-5",
                 !store.active && "opacity-60",
               )}
               style={{ borderColor: store.color }}
@@ -143,6 +147,7 @@ function LojasPage() {
                   {store.active ? t("Ativa") : t("Inativa")}
                   {store.customer_balance ? ` · ${t("Venda com saldo")}` : ""}
                   {store.skip_shipping ? ` · ${t("Sem expedição")}` : ""}
+                  {store.retro_look ? ` · ${t("Visual retrô")}` : ""}
                 </p>
               </div>
               <Button
@@ -157,7 +162,13 @@ function LojasPage() {
             </div>
           ))}
           {stores.length === 0 && (
-            <p className="col-span-full rounded-xl border border-border bg-card px-4 py-12 text-center text-muted-foreground">
+            <p
+              className={
+                retro
+                  ? "col-span-full panel px-4 py-12 text-center text-muted-foreground"
+                  : "col-span-full rounded-xl border border-border bg-card px-4 py-12 text-center text-muted-foreground"
+              }
+            >
               {t("Nenhuma loja cadastrada ainda.")}
             </p>
           )}
@@ -168,7 +179,8 @@ function LojasPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-bold">
-              <KeyRound className="size-6 text-primary" /> {t("Usuários e acessos")}
+              <KeyRound className={retro ? "size-6 text-navy" : "size-6 text-primary"} />{" "}
+              {t("Usuários e acessos")}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {t(
@@ -201,6 +213,7 @@ function AccessMatrix({
   users: AdminUser[];
   onEdit: (u: AdminUser) => void;
 }) {
+  const retro = useRetro();
   const t = useT();
   const queryClient = useQueryClient();
   const accessFn = useServerFn(setStoreAccess);
@@ -231,7 +244,13 @@ function AccessMatrix({
 
   if (users.length === 0) {
     return (
-      <p className="mt-4 rounded-xl border border-border bg-card px-4 py-12 text-center text-muted-foreground">
+      <p
+        className={
+          retro
+            ? "mt-4 panel px-4 py-12 text-center text-muted-foreground"
+            : "mt-4 rounded-xl border border-border bg-card px-4 py-12 text-center text-muted-foreground"
+        }
+      >
         {t(
           "Nenhum usuário cadastrado ainda. Crie um usuário e marque as lojas que ele pode acessar.",
         )}
@@ -240,10 +259,22 @@ function AccessMatrix({
   }
 
   return (
-    <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card">
+    <div
+      className={
+        retro
+          ? "mt-4 overflow-x-auto panel"
+          : "mt-4 overflow-x-auto rounded-xl border border-border bg-card"
+      }
+    >
       <table className="w-full min-w-max text-sm">
         <thead>
-          <tr className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+          <tr
+            className={
+              retro
+                ? "thead-z"
+                : "border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground"
+            }
+          >
             <th className="sticky left-0 bg-card px-4 py-3 font-medium">{t("Usuário")}</th>
             {stores.map((s) => (
               <th key={s.id} className="px-3 py-3 font-medium">
@@ -282,7 +313,9 @@ function AccessMatrix({
                       })
                     }
                     className={cn(
-                      "h-9 rounded-md border border-border bg-background px-2 text-sm",
+                      retro
+                        ? "input w-auto"
+                        : "h-9 rounded-md border border-border bg-background px-2 text-sm",
                       !u.access[s.id] && "text-muted-foreground",
                     )}
                   >
@@ -323,6 +356,7 @@ const EMPTY_STORE: StoreForm = {
   active: true,
   customer_balance: false,
   skip_shipping: false,
+  retro_look: false,
   sort_order: 0,
 };
 
@@ -339,6 +373,7 @@ function StoreDialog({ form: initial, onClose }: { form: StoreForm | null; onClo
 }
 
 function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () => void }) {
+  const retro = useRetro();
   const t = useT();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -357,7 +392,17 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
   };
 
   const save = useMutation({
-    mutationFn: () => saveFn({ data: { ...form, name: form.name.trim() } }),
+    mutationFn: () => {
+      // retro_look only goes when it changed (see storeInput in stores.functions.ts).
+      const { retro_look, ...rest } = form;
+      return saveFn({
+        data: {
+          ...rest,
+          name: form.name.trim(),
+          ...(retro_look !== initial.retro_look ? { retro_look } : {}),
+        },
+      });
+    },
     onSuccess: () => done(t("Loja salva")),
     onError: (e: Error) => toast.error(e.message),
   });
@@ -404,7 +449,11 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
 
       {/* Live preview */}
       <div
-        className="mt-4 overflow-hidden rounded-xl border-2 bg-background"
+        className={
+          retro
+            ? "mt-4 overflow-hidden border-2 bg-background"
+            : "mt-4 overflow-hidden rounded-xl border-2 bg-background"
+        }
         style={{ borderColor: form.color, fontFamily: storeFontStack(form.font) }}
       >
         <div className="h-1.5" style={{ backgroundColor: form.color }} />
@@ -414,7 +463,11 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
             {previewName}
           </span>
           <span
-            className="ml-auto rounded-md px-3 py-1.5 text-sm font-semibold"
+            className={
+              retro
+                ? "ml-auto px-3 py-1.5 text-sm font-semibold"
+                : "ml-auto rounded-md px-3 py-1.5 text-sm font-semibold"
+            }
             style={{ backgroundColor: form.color, color: textOn(form.color) }}
           >
             {t("Finalizar venda")}
@@ -456,7 +509,11 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
                 type="color"
                 value={form.color}
                 onChange={(e) => setForm({ ...form, color: e.target.value })}
-                className="size-8 cursor-pointer rounded-md border border-border bg-transparent"
+                className={
+                  retro
+                    ? "size-8 cursor-pointer border border-border bg-transparent"
+                    : "size-8 cursor-pointer rounded-md border border-border bg-transparent"
+                }
               />
               {t("Outra")}
             </label>
@@ -474,9 +531,13 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
                 onClick={() => setForm({ ...form, font: key })}
                 aria-pressed={form.font === key}
                 className={cn(
-                  "rounded-md border px-3 py-1.5 text-sm transition-colors",
+                  retro
+                    ? "border px-3 py-1.5 text-sm transition-colors"
+                    : "rounded-md border px-3 py-1.5 text-sm transition-colors",
                   form.font === key
-                    ? "border-primary bg-secondary font-semibold text-foreground"
+                    ? retro
+                      ? "border-ink bg-[var(--z-yellow)] font-semibold text-foreground"
+                      : "border-primary bg-secondary font-semibold text-foreground"
                     : "border-border text-muted-foreground hover:text-foreground",
                 )}
                 style={{ fontFamily: storeFontStack(key) }}
@@ -525,7 +586,13 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
           </div>
         </div>
 
-        <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+        <div
+          className={
+            retro
+              ? "flex items-start gap-3 border border-border p-3"
+              : "flex items-start gap-3 rounded-lg border border-border p-3"
+          }
+        >
           <Switch
             id="store-balance"
             checked={form.customer_balance}
@@ -541,7 +608,13 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
           </div>
         </div>
 
-        <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+        <div
+          className={
+            retro
+              ? "flex items-start gap-3 border border-border p-3"
+              : "flex items-start gap-3 rounded-lg border border-border p-3"
+          }
+        >
           <Switch
             id="store-skip-shipping"
             checked={form.skip_shipping}
@@ -552,6 +625,28 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
             <p className="text-xs text-muted-foreground">
               {t(
                 "Venda direta: o cliente já sai com o produto na mão. A venda é registrada como entregue e o módulo Expedição fica oculto.",
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div
+          className={
+            retro
+              ? "flex items-start gap-3 border border-border p-3"
+              : "flex items-start gap-3 rounded-lg border border-border p-3"
+          }
+        >
+          <Switch
+            id="store-retro-look"
+            checked={form.retro_look}
+            onCheckedChange={(v) => setForm({ ...form, retro_look: v })}
+          />
+          <div className="grid gap-1">
+            <Label htmlFor="store-retro-look">{t("Visual retrô")}</Label>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "O caixa desta loja usa o visual de desktop retrô (janela estilo Windows 95). A cor e o logo da loja continuam valendo; a fonte e o modo escuro não se aplicam.",
               )}
             </p>
           </div>

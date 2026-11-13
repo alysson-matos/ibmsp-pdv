@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import type { StoreTheme } from "./gate.functions";
+import { toStoreTheme, type StoreTheme } from "./gate.functions";
 import { STORE_FONT_KEYS, type StoreFont } from "./store-theme";
 
 export type MemberRole = "gerente" | "operacao";
@@ -27,11 +27,12 @@ export const adminListStores = createServerFn({ method: "GET" }).handler(
     const supabase = await requireAdmin();
     const { data, error } = await supabase
       .from("stores")
-      .select("id, name, color, font, logo, active, customer_balance, skip_shipping, sort_order")
+      // "*": see STORE_COLUMNS in gate.functions.ts.
+      .select("*")
       .order("sort_order")
       .order("name");
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return (data ?? []).map((row) => ({ ...toStoreTheme(row), sort_order: row.sort_order }));
   },
 );
 
@@ -48,6 +49,8 @@ const storeInput = z.object({
   active: z.boolean(),
   customer_balance: z.boolean().default(false),
   skip_shipping: z.boolean().default(false),
+  // Only sent when it changes, so stores can still be saved before the column exists.
+  retro_look: z.boolean().optional(),
   sort_order: z.number().int().default(0),
 });
 
@@ -56,7 +59,8 @@ export const saveStore = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { requireAdmin } = await import("./gate.server");
     const supabase = await requireAdmin();
-    const { id, ...payload } = data;
+    const { id, retro_look, ...rest } = data;
+    const payload = retro_look === undefined ? rest : { ...rest, retro_look };
 
     if (id) {
       const { error } = await supabase.from("stores").update(payload).eq("id", id);

@@ -1,7 +1,6 @@
 export const PDV: Record<string, string> = {
   "Nada por aqui.": "Nothing here.",
-  "{name} está sem estoque e não pode ser vendido":
-    "{name} is out of stock and cannot be sold",
+  "{name} está sem estoque e não pode ser vendido": "{name} is out of stock and cannot be sold",
   "Estoque insuficiente: restam {stock} un. de {name}":
     "Insufficient stock: {stock} units of {name} left",
   'Produto não encontrado para "{code}"': 'Product not found for "{code}"',
@@ -12,11 +11,9 @@ export const PDV: Record<string, string> = {
   "Selecione o operador da venda": "Select the sale operator",
   "Valor recebido menor que o total": "Amount received is less than the total",
   "Leitor de código de barras": "Barcode scanner",
-  "Passe o produto no leitor ou digite o código / nome":
-    "Scan the product or type the code / name",
+  "Passe o produto no leitor ou digite o código / nome": "Scan the product or type the code / name",
   Carrinho: "Cart",
-  "Nenhum item. Passe o primeiro produto no leitor.":
-    "No items. Scan the first product.",
+  "Nenhum item. Passe o primeiro produto no leitor.": "No items. Scan the first product.",
   "Diminuir quantidade": "Decrease quantity",
   "Aumentar quantidade": "Increase quantity",
   "Remover item": "Remove item",
@@ -46,4 +43,38 @@ export const PDV: Record<string, string> = {
   "retirada na expedição": "pickup at shipping",
   "entregue ao cliente": "handed to the customer",
   "Recebido {value} · Troco": "Received {value} · Change",
+  item: "item",
+  itens: "items",
+  "Resultado da busca": "Search results",
+  'Nenhum produto com "{term}".': 'No product matches "{term}".',
+  "Nenhum produto ativo. Cadastre os produtos no Inventário.":
+    "No active products. Register them in Inventory.",
+  "Mostrando {shown} de {total}. Digite o nome ou o código para achar os outros.":
+    "Showing {shown} of {total}. Type the name or the code to find the others.",
+  Pedido: "Order",
+  PEDIDO: "ORDER",
+  "Toque nos produtos ou passe no leitor para montar o pedido.":
+    "Tap the products or scan them to build the order.",
+  "Escolha o cliente": "Choose the customer",
+  "Saldo insuficiente": "Insufficient balance",
+  "Saldo insuficiente — faltam": "Insufficient balance — short by",
+  "Valor exato": "Exact amount",
+  "faltam {value}": "{value} short",
+  "Confirme o Pix antes de finalizar.": "Confirm the Pix before finishing.",
+  "Passe o cartão na maquininha e finalize depois da aprovação.":
+    "Run the card on the terminal and finish after it is approved.",
+  "Finalizar venda": "Finish sale",
+  "Atalhos: / busca · Ctrl+Enter ou Alt+F finaliza · Alt+C cliente · Alt+N nova venda":
+    "Shortcuts: / search · Ctrl+Enter or Alt+F finish · Alt+C customer · Alt+N new sale",
+  "Atalhos: / busca · Ctrl+Enter ou Alt+F finaliza · Alt+1–4 pagamento · Alt+C comprador · Alt+N nova venda":
+    "Shortcuts: / search · Ctrl+Enter or Alt+F finish · Alt+1–4 payment · Alt+C customer · Alt+N new sale",
+  Pagar: "Pay",
+  esgotado: "sold out",
+  ESGOTADO: "SOLD OUT",
+  "{n} em estoque": "{n} in stock",
+  "est {n}": "stk {n}",
+  un: "ea",
+  Comprovante: "Receipt",
+  TOTAL: "TOTAL",
+  "Próxima venda": "Next sale",
 };

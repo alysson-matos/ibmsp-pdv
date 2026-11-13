@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { reportLovableError } from "@/lib/lovable-error-reporting";
 import { restartApp } from "@/lib/restart-app";
+import { useRetro } from "@/lib/retro";
+import { cn } from "@/lib/utils";
 
 const SESSION_EXPIRED = "Sessão expirada";
 
@@ -18,6 +20,8 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
   // A restart refused by the loop guard falls through to the normal error screen.
   const [restartSkipped, setRestartSkipped] = useState(false);
   const expired = isSessionExpiredError(error) && !restartSkipped;
+  // In the retro look it renders inside the store window, not as a full page.
+  const page = useRetro() ? "min-h-[50vh]" : "min-h-screen bg-background";
 
   useEffect(() => {
     if (expired) {
@@ -31,14 +35,14 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
 
   if (expired) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className={cn("flex items-center justify-center", page)}>
         <div className="size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className={cn("flex items-center justify-center px-4", page)}>
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold text-foreground">{t("Esta página não carregou")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">

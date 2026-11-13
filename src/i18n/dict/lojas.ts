@@ -27,6 +27,9 @@ export const LOJAS: Record<string, string> = {
   "Sem expedição": "No shipping",
   "Venda direta: o cliente já sai com o produto na mão. A venda é registrada como entregue e o módulo Expedição fica oculto.":
     "Direct sale: the customer leaves with the product in hand. The sale is recorded as delivered and the Shipping module is hidden.",
+  "Visual retrô": "Retro look",
+  "O caixa desta loja usa o visual de desktop retrô (janela estilo Windows 95). A cor e o logo da loja continuam valendo; a fonte e o modo escuro não se aplicam.":
+    "This store's register uses the retro desktop look (Windows 95-style window). The store color and logo still apply; the font and dark mode don't.",
   "Editar loja": "Edit store",
   Ativa: "Active",
   Inativa: "Inactive",

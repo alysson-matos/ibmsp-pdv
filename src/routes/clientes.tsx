@@ -48,6 +48,7 @@ import { RouteError } from "@/components/route-error";
 import { prefetchQuiet } from "@/lib/prefetch";
 import { useCurrentStore } from "@/lib/use-current-store";
 import { CustomerImportButton, downloadTemplate } from "@/components/customer-import";
+import { useRetro } from "@/lib/retro";
 
 const customersQuery = queryOptions({
   queryKey: ["customers"],
@@ -78,6 +79,7 @@ const parseMoney = (value: string) => {
 };
 
 function ClientesPage() {
+  const retro = useRetro();
   const t = useT();
   const store = useCurrentStore();
   const { data: customers } = useSuspenseQuery(customersQuery);
@@ -97,11 +99,12 @@ function ClientesPage() {
   const totalBalance = customers.reduce((sum, c) => sum + c.balance, 0);
 
   return (
-    <main className="mx-auto max-w-4xl p-4">
+    <main className={retro ? "mx-auto w-full max-w-4xl" : "mx-auto max-w-4xl p-4"}>
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Contact className="size-6 text-primary" /> {t("Clientes")}
+            <Contact className={retro ? "size-6 text-navy" : "size-6 text-primary"} />{" "}
+            {t("Clientes")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t(
@@ -125,7 +128,13 @@ function ClientesPage() {
       </div>
 
       {store && !store.customer_balance ? (
-        <p className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
+        <p
+          className={
+            retro
+              ? "mt-4 border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm"
+              : "mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm"
+          }
+        >
           {t(
             "A venda com saldo está desligada nesta loja. O administrador pode ligá-la em Lojas > editar loja.",
           )}
@@ -142,13 +151,25 @@ function ClientesPage() {
             className="pl-9"
           />
         </div>
-        <div className="rounded-lg border border-border bg-card px-4 py-2 text-sm">
+        <div
+          className={
+            retro
+              ? "panel px-4 py-2 text-sm"
+              : "rounded-lg border border-border bg-card px-4 py-2 text-sm"
+          }
+        >
           <span className="text-muted-foreground">{t("Saldo total dos clientes")}: </span>
           <span className="tabular font-semibold">{brl(totalBalance)}</span>
         </div>
       </div>
 
-      <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+      <ul
+        className={
+          retro
+            ? "mt-4 divide-y divide-border overflow-hidden panel"
+            : "mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card"
+        }
+      >
         {filtered.map((c) => (
           <li
             key={c.id}
@@ -161,7 +182,13 @@ function ClientesPage() {
                 {!c.active ? `${c.notes ? " · " : ""}${t("Inativo")}` : ""}
               </p>
             </div>
-            <span className="tabular w-28 text-right text-lg font-bold text-primary">
+            <span
+              className={
+                retro
+                  ? "tabular w-28 text-right text-lg font-bold text-navy"
+                  : "tabular w-28 text-right text-lg font-bold text-primary"
+              }
+            >
               {brl(c.balance)}
             </span>
             <div className="flex items-center gap-1">
@@ -397,6 +424,7 @@ function BalanceDialog({ customer, onClose }: { customer: Customer | null; onClo
 }
 
 function BalanceForm({ customer, onClose }: { customer: Customer; onClose: () => void }) {
+  const retro = useRetro();
   const t = useT();
   const queryClient = useQueryClient();
   const adjustFn = useServerFn(adjustCustomerBalance);
@@ -454,9 +482,13 @@ function BalanceForm({ customer, onClose }: { customer: Customer; onClose: () =>
               type="button"
               onClick={() => setMode(m)}
               className={cn(
-                "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors",
+                retro
+                  ? "flex items-center justify-center gap-2 border px-3 py-2.5 text-sm font-medium transition-colors"
+                  : "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors",
                 mode === m
-                  ? "border-primary bg-primary/15 text-primary"
+                  ? retro
+                    ? "border-ink bg-[var(--z-blue)] text-white"
+                    : "border-primary bg-primary/15 text-primary"
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
@@ -487,7 +519,13 @@ function BalanceForm({ customer, onClose }: { customer: Customer; onClose: () =>
             onChange={(e) => setReason(e.target.value)}
           />
         </div>
-        <div className="flex justify-between rounded-lg bg-secondary/60 px-3 py-2 text-sm">
+        <div
+          className={
+            retro
+              ? "flex justify-between bg-secondary/60 px-3 py-2 text-sm"
+              : "flex justify-between rounded-lg bg-secondary/60 px-3 py-2 text-sm"
+          }
+        >
           <span className="text-muted-foreground">{t("Saldo depois")}</span>
           <span className={cn("tabular font-semibold", after < 0 && "text-destructive")}>
             {brl(after)}
@@ -523,6 +561,7 @@ function StatementDialog({
   customer: Customer | null;
   onClose: () => void;
 }) {
+  const retro = useRetro();
   const t = useT();
   const listFn = useServerFn(listCustomerMovements);
   const { data: movements, isLoading } = useQuery({
@@ -560,7 +599,7 @@ function StatementDialog({
                 <span
                   className={cn(
                     "tabular font-semibold",
-                    m.delta < 0 ? "text-destructive" : "text-primary",
+                    m.delta < 0 ? "text-destructive" : retro ? "text-navy" : "text-primary",
                   )}
                 >
                   {m.delta > 0 ? "+" : ""}

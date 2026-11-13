@@ -433,6 +433,7 @@ export type Database = {
           id: string
           logo: string | null
           name: string
+          retro_look: boolean
           skip_shipping: boolean
           sort_order: number
           updated_at: string
@@ -446,6 +447,7 @@ export type Database = {
           id?: string
           logo?: string | null
           name: string
+          retro_look?: boolean
           skip_shipping?: boolean
           sort_order?: number
           updated_at?: string
@@ -459,6 +461,7 @@ export type Database = {
           id?: string
           logo?: string | null
           name?: string
+          retro_look?: boolean
           skip_shipping?: boolean
           sort_order?: number
           updated_at?: string

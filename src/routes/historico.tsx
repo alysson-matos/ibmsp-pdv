@@ -22,6 +22,7 @@ import { useCurrentStore } from "@/lib/use-current-store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useRetro } from "@/lib/retro";
 
 type Filters = {
   from: string;
@@ -79,6 +80,7 @@ export const Route = createFileRoute("/historico")({
 });
 
 function HistoricoPage() {
+  const retro = useRetro();
   const t = useT();
   const [tab, setTab] = useState<"vendas" | "estoque" | "relatorio">("vendas");
 
@@ -89,9 +91,9 @@ function HistoricoPage() {
   ] as const;
 
   return (
-    <main className="mx-auto max-w-[1600px] p-4">
+    <main className={retro ? "w-full" : "mx-auto max-w-[1600px] p-4"}>
       <h1 className="flex items-center gap-2 text-2xl font-bold">
-        <ReceiptText className="size-6 text-primary" /> {t("Histórico")}
+        <ReceiptText className={retro ? "size-6 text-navy" : "size-6 text-primary"} /> {t("Histórico")}
       </h1>
 
       <div className="mt-4 flex flex-wrap gap-1.5">
@@ -101,10 +103,10 @@ function HistoricoPage() {
             type="button"
             onClick={() => setTab(id)}
             className={cn(
-              "flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
+              (retro ? "flex items-center gap-2 border-2 px-3 py-2 text-xs font-bold transition-colors" : "flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"),
               tab === id
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground",
+                ? (retro ? "border-ink bg-[var(--z-blue)] text-white" : "border-primary bg-primary/15 text-primary")
+                : (retro ? "border-ink bg-white text-foreground hover:bg-secondary" : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground"),
             )}
           >
             <Icon className="size-4" />
@@ -121,6 +123,7 @@ function HistoricoPage() {
 }
 
 function SalesTab() {
+  const retro = useRetro();
   const t = useT();
   const store = useCurrentStore();
   // "Saldo" only shows for stores that sell with customer balance.
@@ -168,7 +171,7 @@ function SalesTab() {
     <>
 
 
-      <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
+      <div className={retro ? "mt-4 flex flex-wrap items-end gap-3 panel p-4" : "mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4"}>
         <div className="grid gap-1.5">
           <Label htmlFor="from" className="text-xs uppercase tracking-widest text-muted-foreground">
             {t("De")}
@@ -201,7 +204,7 @@ function SalesTab() {
             id="operator"
             value={filters.operator_id}
             onChange={(e) => setFilters({ ...filters, operator_id: e.target.value })}
-            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            className={retro ? "input w-auto" : "h-9 rounded-md border border-border bg-background px-2 text-sm"}
           >
             <option value="todos">{t("Todos")}</option>
             {operators.map((o) => (
@@ -218,10 +221,10 @@ function SalesTab() {
               type="button"
               onClick={() => setFilters({ ...filters, payment_method: m })}
               className={cn(
-                "rounded-md border px-3 py-2 text-sm transition-colors",
+                (retro ? "border px-3 py-2 text-sm transition-colors" : "rounded-md border px-3 py-2 text-sm transition-colors"),
                 filters.payment_method === m
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground",
+                  ? (retro ? "border-ink bg-[var(--z-blue)] text-white" : "border-primary bg-primary/15 text-primary")
+                  : (retro ? "border-ink bg-white text-foreground hover:bg-secondary" : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground"),
               )}
             >
               {m === "todas" ? t("Todas") : t(PAYMENT_LABEL[m] ?? m)}
@@ -276,9 +279,9 @@ function SalesTab() {
         ))}
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-lg">
+      <div className={retro ? "mt-4 overflow-x-auto panel" : "mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-lg"}>
         <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+          <thead className={retro ? "thead-z" : "border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground"}>
             <tr>
               <SortableTh label={t("Data")} sortKey="date" sort={sort} onToggle={toggle} />
               <SortableTh label={t("Comprador")} sortKey="customer" sort={sort} onToggle={toggle} />
@@ -295,7 +298,7 @@ function SalesTab() {
               <Fragment key={sale.id}>
                 <tr
                   onClick={() => setOpenId(openId === sale.id ? null : sale.id)}
-                  className="cursor-pointer hover:bg-secondary/30"
+                  className={retro ? "cursor-pointer hover:bg-[#FFF9D9]" : "cursor-pointer hover:bg-secondary/30"}
                 >
                   <td className="tabular px-4 py-3">{dateTime(sale.created_at)}</td>
                   <td className="px-4 py-3">{sale.customer_name || "—"}</td>
@@ -367,6 +370,7 @@ function SalesTab() {
 }
 
 function StockTab() {
+  const retro = useRetro();
   const t = useT();
   const today = todayISO();
   const [range, setRange] = useState({
@@ -392,7 +396,7 @@ function StockTab() {
 
   return (
     <>
-      <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
+      <div className={retro ? "mt-4 flex flex-wrap items-end gap-3 panel p-4" : "mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4"}>
         <div className="grid gap-1.5">
           <Label htmlFor="mfrom" className="text-xs uppercase tracking-widest text-muted-foreground">
             {t("De")}
@@ -441,9 +445,9 @@ function StockTab() {
       </div>
 
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-lg">
+      <div className={retro ? "mt-4 overflow-x-auto panel" : "mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-lg"}>
         <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+          <thead className={retro ? "thead-z" : "border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground"}>
             <tr>
               <SortableTh label={t("Data")} sortKey="date" sort={sort} onToggle={toggle} />
               <SortableTh label={t("Produto")} sortKey="product" sort={sort} onToggle={toggle} />
@@ -456,7 +460,7 @@ function StockTab() {
           </thead>
           <tbody className="divide-y divide-border">
             {rows.map((m) => (
-              <tr key={m.id} className="hover:bg-secondary/30">
+              <tr key={m.id} className={retro ? "hover:bg-[#FFF9D9]" : "hover:bg-secondary/30"}>
                 <td className="tabular px-4 py-3">{dateTime(m.created_at)}</td>
                 <td className="px-4 py-3">{m.product_name}</td>
                 <td className="tabular px-4 py-3 text-muted-foreground">{m.barcode || "—"}</td>
@@ -465,7 +469,7 @@ function StockTab() {
                 <td
                   className={cn(
                     "tabular px-4 py-3 text-right font-semibold",
-                    m.delta > 0 ? "text-primary" : "text-destructive",
+                    m.delta > 0 ? (retro ? "text-navy" : "text-primary") : "text-destructive",
                   )}
                 >
                   {m.delta > 0 ? `+${m.delta}` : m.delta}
@@ -491,6 +495,7 @@ function StockTab() {
 
 
 function StockReportTab() {
+  const retro = useRetro();
   const t = useT();
   const { data: products } = useSuspenseQuery(productsQuery);
   const active = products.filter((p) => p.active);
@@ -540,9 +545,9 @@ function StockReportTab() {
         />
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-lg">
+      <div className={retro ? "mt-4 overflow-x-auto panel" : "mt-4 overflow-x-auto rounded-xl border border-border bg-card shadow-lg"}>
         <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+          <thead className={retro ? "thead-z" : "border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground"}>
             <tr>
               <SortableTh label={t("Produto")} sortKey="name" sort={sort} onToggle={toggle} />
               <SortableTh label={t("Código")} sortKey="barcode" sort={sort} onToggle={toggle} />
@@ -554,7 +559,7 @@ function StockReportTab() {
           </thead>
           <tbody className="divide-y divide-border">
             {rows.map((p) => (
-              <tr key={p.id} className="hover:bg-secondary/30">
+              <tr key={p.id} className={retro ? "hover:bg-[#FFF9D9]" : "hover:bg-secondary/30"}>
                 <td className="px-4 py-3">{p.name}</td>
                 <td className="tabular px-4 py-3 text-muted-foreground">{p.barcode}</td>
                 <td className="tabular px-4 py-3 text-right">{brl(p.price)}</td>
@@ -610,15 +615,16 @@ function SummaryCard({
   highlight?: boolean;
   hint?: string | undefined;
 }) {
+  const retro = useRetro();
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card p-4",
-        highlight && "border-primary/40 bg-primary/10",
+        (retro ? "panel p-4" : "rounded-xl border border-border bg-card p-4"),
+        highlight && (retro ? "bg-[var(--z-yellow)]" : "border-primary/40 bg-primary/10"),
       )}
     >
       <p className="text-xs uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className={cn("tabular mt-1 text-xl font-bold", highlight && "text-primary")}>{value}</p>
+      <p className={cn("tabular mt-1 text-xl font-bold", highlight && (retro ? "text-navy" : "text-primary"))}>{value}</p>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );

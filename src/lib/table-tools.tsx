@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "luci
 
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
+import { useRetro } from "@/lib/retro";
 
 // String.localeCompare with a locale builds a new collator on every call, which makes
 // sorting large tables dozens of times slower. Reuse a single instance instead.
@@ -120,11 +121,13 @@ export function Pagination({
   pageSize: number;
   onPageChange: (page: number) => void;
 }) {
+  const retro = useRetro();
   const t = useT();
   if (pageCount <= 1) return null;
   const end = Math.min(start + pageSize, total);
-  const buttonClass =
-    "inline-flex items-center gap-1 rounded-md border border-input px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40";
+  const buttonClass = retro
+    ? "inline-flex items-center gap-1 border border-input px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
+    : "inline-flex items-center gap-1 rounded-md border border-input px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40";
 
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
