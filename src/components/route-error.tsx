@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
@@ -17,20 +17,22 @@ export function isSessionExpiredError(error: unknown) {
 export function RouteError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   const t = useT();
-  // A restart refused by the loop guard falls through to the normal error screen.
-  const [restartSkipped, setRestartSkipped] = useState(false);
-  const expired = isSessionExpiredError(error) && !restartSkipped;
+  const expired = isSessionExpiredError(error);
   // In the retro look it renders inside the store window, not as a full page.
   const page = useRetro() ? "min-h-[50vh]" : "min-h-screen bg-background";
 
   useEffect(() => {
     if (expired) {
-      if (!restartApp()) setRestartSkipped(true);
+      // A real expiry immediately after switching stores still needs recovery.
+      // The root access read returns null instead of throwing for an expired gate.
+      if (!restartApp()) restartApp({ force: true });
       return;
     }
 
-    console.error(error);
-    reportLovableError(error, { boundary: "tanstack_route_error_component" });
+    if (!isSessionExpiredError(error)) {
+      console.error(error);
+      reportLovableError(error, { boundary: "tanstack_route_error_component" });
+    }
   }, [error, expired, router]);
 
   if (expired) {

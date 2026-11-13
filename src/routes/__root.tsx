@@ -264,6 +264,8 @@ function UnlockScreen() {
         return;
       }
       await router.invalidate();
+    } catch {
+      setError(t("Não foi possível conectar. Tente novamente."));
     } finally {
       setLoading(false);
     }
@@ -490,18 +492,25 @@ function RootShellContent() {
     }
   }
   const signOut = () => resetSession(setSigningOut, () => lockFn());
-  // Full reload instead of invalidating in place: the store pages still mounted
-  // would refetch without a store, fail and keep re-invalidating the router.
+  // Keep pages unmounted until access is refreshed; a full reload would abort
+  // pending server calls and turn a successful switch into a Failed to fetch.
   async function leaveStore() {
     flushSync(() => setLeaving(true));
     try {
       await queryClient.cancelQueries();
       queryClient.clear();
       await selectFn({ data: { storeId: null } });
+      await router.invalidate();
+      await router.navigate({ to: "/" });
     } catch (error) {
-      console.error(error);
+      if (error instanceof Error && error.message.includes("Sessão expirada")) {
+        restartApp();
+        return;
+      }
+      // A failed connection must not strand the app on the switching spinner.
+    } finally {
+      setLeaving(false);
     }
-    restartApp({ force: true });
   }
 
   if (!access || signingOut) return <UnlockScreen />;
