@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { PRODUCT_ICON_KEYS } from "./product-icons";
+
 export type Product = {
   id: string;
   barcode: string;
@@ -10,6 +12,8 @@ export type Product = {
   stock: number;
   min_stock: number;
   active: boolean;
+  /** Icon in the retro look (see product-icons.ts); null = guessed from the name. */
+  icon: string | null;
 };
 
 export type SaleItem = {
@@ -79,7 +83,8 @@ export const listProducts = createServerFn({ method: "GET" }).handler(async (): 
   const { supabase, storeId } = await getStoreSupabase("any");
   const { data, error } = await supabase
     .from("products")
-    .select("id, barcode, name, price, cost, stock, min_stock, active")
+    // "*" so the icon column, before its migration is applied, just reads as empty.
+    .select("*")
     .eq("store_id", storeId)
     .order("name", { ascending: true });
 
@@ -94,6 +99,7 @@ export const listProducts = createServerFn({ method: "GET" }).handler(async (): 
     stock: p.stock,
     min_stock: p.min_stock,
     active: p.active,
+    icon: (p as { icon?: string | null }).icon ?? null,
   }));
 });
 
@@ -106,6 +112,8 @@ const productInput = z.object({
   stock: z.number().int().min(0),
   min_stock: z.number().int().min(0),
   active: z.boolean(),
+  // Only sent when it changes, so products can still be saved before the column exists.
+  icon: z.enum(PRODUCT_ICON_KEYS).nullable().optional(),
 });
 
 export const saveProduct = createServerFn({ method: "POST" })
@@ -122,6 +130,7 @@ export const saveProduct = createServerFn({ method: "POST" })
       stock: data.stock,
       min_stock: data.min_stock,
       active: data.active,
+      ...(data.icon !== undefined ? { icon: data.icon } : {}),
     };
 
     if (data.id) {

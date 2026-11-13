@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useRetro } from "@/lib/retro";
+import { Sprite } from "@/components/retro";
+import { guessProductIcon, PRODUCT_ICONS, productIcon, type ProductIcon } from "@/lib/product-icons";
 
 const productsQuery = queryOptions({
   queryKey: ["products"],
@@ -70,6 +72,10 @@ type FormState = {
   stock: string;
   min_stock: string;
   active: boolean;
+  /** Retro look only. null = guessed from the name. */
+  icon: ProductIcon | null;
+  /** The icon saved in the database, to send the field only when it changes. */
+  savedIcon: string | null;
 };
 
 const PAGE_SIZE = 50;
@@ -107,7 +113,58 @@ const emptyForm: FormState = {
   stock: "0",
   min_stock: "5",
   active: true,
+  icon: null,
+  savedIcon: null,
 };
+
+/**
+ * Pixel-art icon of the product on the retro register. "Automático" keeps it empty and
+ * the register picks one from the name, so products that were never edited also get one.
+ */
+function IconPicker({
+  name,
+  value,
+  onChange,
+}: {
+  name: string;
+  value: ProductIcon | null;
+  onChange: (icon: ProductIcon | null) => void;
+}) {
+  const t = useT();
+  const options: { key: ProductIcon | null; label: string; sprite: string }[] = [
+    { key: null, label: t("Automático"), sprite: guessProductIcon(name) },
+    ...PRODUCT_ICONS.map((i) => ({ key: i.key, label: t(i.label), sprite: i.key })),
+  ];
+  return (
+    <div className="grid gap-2">
+      <Label>{t("Ícone no caixa")}</Label>
+      <div role="radiogroup" aria-label={t("Ícone no caixa")} className="grid grid-cols-4 gap-1.5 sm:grid-cols-5">
+        {options.map((o) => (
+          <button
+            key={o.key ?? "auto"}
+            type="button"
+            role="radio"
+            aria-checked={value === o.key}
+            title={o.label}
+            onClick={() => onChange(o.key)}
+            className={cn(
+              "flex flex-col items-center gap-0.5 border-2 px-1 py-1.5 text-[11px] font-bold leading-tight transition-colors",
+              value === o.key
+                ? "border-ink bg-[var(--z-yellow)]"
+                : "border-transparent bg-white hover:border-ink/40 hover:bg-secondary",
+            )}
+          >
+            <Sprite name={o.sprite} size={32} style={{ opacity: o.key === null ? 0.6 : 1 }} />
+            <span className="w-full truncate text-center">{o.label}</span>
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {t("Em Automático, o caixa escolhe pelo nome do produto.")}
+      </p>
+    </div>
+  );
+}
 
 function InventarioPage() {
   const retro = useRetro();
@@ -218,6 +275,8 @@ function InventarioPage() {
       stock: String(product.stock),
       min_stock: String(product.min_stock),
       active: product.active,
+      icon: (PRODUCT_ICONS.some((i) => i.key === product.icon) ? product.icon : null) as ProductIcon | null,
+      savedIcon: product.icon,
     });
     setOpen(true);
   }
@@ -234,6 +293,8 @@ function InventarioPage() {
         stock: Number(form.stock) || 0,
         min_stock: Number(form.min_stock) || 0,
         active: form.active,
+        // Only when it changed: saving keeps working before the icon migration is applied.
+        ...(form.icon !== form.savedIcon ? { icon: form.icon } : {}),
       },
     });
   }
@@ -289,7 +350,16 @@ function InventarioPage() {
               const low = p.stock <= p.min_stock;
               return (
                 <tr key={p.id} className={retro ? "hover:bg-[#FFF9D9]" : "hover:bg-secondary/30"}>
-                  <td className="px-4 py-3 font-medium">{p.name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {retro ? (
+                      <span className="flex items-center gap-2">
+                        <Sprite name={productIcon(p)} size={24} />
+                        {p.name}
+                      </span>
+                    ) : (
+                      p.name
+                    )}
+                  </td>
                   <td className="tabular px-4 py-3 text-muted-foreground">{p.barcode}</td>
                   <td className="tabular px-4 py-3 text-right">{brl(p.price)}</td>
                   <td className="tabular px-4 py-3 text-right text-muted-foreground">
@@ -461,6 +531,13 @@ function InventarioPage() {
                 />
                 <Label htmlFor="active">{t("Produto ativo para venda")}</Label>
               </div>
+              {retro ? (
+                <IconPicker
+                  name={form.name}
+                  value={form.icon}
+                  onChange={(icon) => setForm({ ...form, icon })}
+                />
+              ) : null}
             </div>
 
             <DialogFooter>

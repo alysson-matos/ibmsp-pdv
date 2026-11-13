@@ -28,6 +28,7 @@ import {
   OPERATOR_STORAGE_KEY,
   productsQuery,
 } from "@/lib/pdv-queries";
+import { productIcon } from "@/lib/product-icons";
 import { useCurrentStore } from "@/lib/use-current-store";
 
 type CartLine = { product: Product; quantity: number };
@@ -757,7 +758,7 @@ function ProductCard({
       <span className={cn("in-cart", inCart > 0 && "on")} aria-hidden="true">
         {inCart || ""}
       </span>
-      <Sprite name="tag" />
+      <Sprite name={productIcon(p)} />
       <b>{p.name}</b>
       <span className="price">{brl(p.price)}</span>
       <span className="stk" aria-hidden="true">
@@ -789,7 +790,7 @@ function CartRow({
         animate={{ x: 0, transition: LINE }}
         exit={{ x: 40, transition: LINE }}
       >
-        <Sprite name="tag" size={28} />
+        <Sprite name={productIcon(p)} size={28} />
         <div>
           <div className="nm">{p.name}</div>
           <div className="sub">

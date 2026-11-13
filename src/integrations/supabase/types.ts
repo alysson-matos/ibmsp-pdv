@@ -178,6 +178,7 @@ export type Database = {
           cost: number
           created_at: string
           id: string
+          icon: string | null
           min_stock: number
           name: string
           price: number
@@ -191,6 +192,7 @@ export type Database = {
           cost?: number
           created_at?: string
           id?: string
+          icon?: string | null
           min_stock?: number
           name: string
           price?: number
@@ -204,6 +206,7 @@ export type Database = {
           cost?: number
           created_at?: string
           id?: string
+          icon?: string | null
           min_stock?: number
           name?: string
           price?: number

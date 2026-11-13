@@ -78,6 +78,13 @@
       "when": 1794800000001,
       "tag": "0010_finalize_pending_register_migrations",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794800100001,
+      "tag": "0011_icone_produtos",
+      "breakpoints": true
     }
   ]
 }
