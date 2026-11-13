@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { PRODUCT_ICON_KEYS } from "./product-icons";
+import { MAX_PRODUCT_IMPORT, PROVISIONAL_PREFIX, productKey } from "./product-import";
 
 export type Product = {
   id: string;
@@ -150,6 +151,101 @@ export const saveProduct = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(traduzErro(error.message));
     return { id: created.id };
+  });
+
+/**
+ * Creates products from an imported spreadsheet (Inventário > Importar planilha).
+ * Names or barcodes already in the store, or repeated in the file, are skipped (the
+ * first row wins). Products without a barcode get a provisional one (SEM-001,
+ * SEM-002...), continuing from the highest already used, to be replaced later by the
+ * real code in the product form.
+ */
+export const importProducts = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        rows: z
+          .array(
+            z.object({
+              name: z.string().trim().min(1).max(120),
+              barcode: z.string().trim().max(60).default(""),
+              price: z.number().min(0).max(99_999_999),
+              cost: z.number().min(0).max(99_999_999).default(0),
+              stock: z.number().int().min(0).max(99_999_999).default(0),
+              min_stock: z.number().int().min(0).max(99_999_999).default(5),
+            }),
+          )
+          .min(1, "A planilha não tem produtos")
+          .max(MAX_PRODUCT_IMPORT, `Importe no máximo ${MAX_PRODUCT_IMPORT} produtos por vez`),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getStoreSupabase } = await import("./pos.server");
+    const { supabase, storeId } = await getStoreSupabase("manage");
+
+    const { data: existing, error: existingError } = await supabase
+      .from("products")
+      .select("name, barcode")
+      .eq("store_id", storeId);
+    if (existingError) throw new Error(existingError.message);
+
+    const names = new Set((existing ?? []).map((p) => productKey(p.name)));
+    const codes = new Set((existing ?? []).map((p) => p.barcode));
+    // Next provisional number: one after the highest SEM-<n> already in the store.
+    const provisionalNumber = (barcode: string) => {
+      if (!barcode.startsWith(PROVISIONAL_PREFIX)) return 0;
+      const n = Number(barcode.slice(PROVISIONAL_PREFIX.length));
+      return Number.isInteger(n) && n > 0 ? n : 0;
+    };
+    let next = Math.max(0, ...(existing ?? []).map((p) => provisionalNumber(p.barcode))) + 1;
+
+    const fresh = data.rows.filter((row) => {
+      const key = productKey(row.name);
+      if (names.has(key) || (row.barcode && codes.has(row.barcode))) return false;
+      names.add(key);
+      if (row.barcode) codes.add(row.barcode);
+      return true;
+    });
+
+    const toInsert = fresh.map((row) => {
+      let barcode = row.barcode;
+      while (!barcode || codes.has(barcode)) {
+        barcode = `${PROVISIONAL_PREFIX}${String(next++).padStart(3, "0")}`;
+      }
+      codes.add(barcode);
+      return {
+        store_id: storeId,
+        name: row.name.replace(/\s+/g, " "),
+        barcode,
+        price: Math.round(row.price * 100) / 100,
+        cost: Math.round(row.cost * 100) / 100,
+        stock: row.stock,
+        min_stock: row.min_stock,
+        active: true,
+      };
+    });
+
+    let created = 0;
+    for (let i = 0; i < toInsert.length; i += 500) {
+      const { data: inserted, error } = await supabase
+        .from("products")
+        .insert(toInsert.slice(i, i + 500))
+        .select("id");
+      if (error) {
+        const message = traduzErro(error.message);
+        throw new Error(
+          created ? `${created} produtos foram importados, mas o restante falhou: ${message}` : message,
+        );
+      }
+      created += inserted.length;
+    }
+
+    return {
+      created,
+      skipped: data.rows.length - fresh.length,
+      provisional: fresh.filter((r) => !r.barcode).length,
+    };
   });
 
 export const deleteProduct = createServerFn({ method: "POST" })

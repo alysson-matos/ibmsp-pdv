@@ -32,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useRetro } from "@/lib/retro";
 import { Sprite } from "@/components/retro";
+import { ProductImportButton } from "@/components/product-import";
 import { guessProductIcon, PRODUCT_ICONS, productIcon, type ProductIcon } from "@/lib/product-icons";
 
 const productsQuery = queryOptions({
@@ -323,6 +324,7 @@ function InventarioPage() {
             placeholder={t("Buscar por nome ou código")}
             className="w-64"
           />
+          <ProductImportButton products={products} />
           <Button variant="outline" onClick={exportXlsx}>
             <FileSpreadsheet className="size-4" /> {t("Exportar Excel")}
           </Button>
