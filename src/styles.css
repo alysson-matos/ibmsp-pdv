@@ -1411,7 +1411,7 @@
   }
   .line-in {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) auto auto;
+    grid-template-columns: 28px minmax(0, 1fr) auto auto auto;
     gap: 8px;
     align-items: center;
     padding: 7px 10px;
@@ -1431,6 +1431,20 @@
     font: 400 20px var(--f-num);
     min-width: 64px;
     text-align: right;
+  }
+  .line-in .rm {
+    width: 22px;
+    height: 22px;
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--z-muted);
+  }
+  .line-in .rm:hover {
+    color: var(--bad);
   }
   .qty {
     display: flex;

@@ -28,20 +28,17 @@ const CHURCH = "Igreja Batista Memorial de São Paulo";
 
 function NotFoundComponent() {
   return (
-    <Desk className="center">
-      <Win className="narrow" title="404.EXE">
-        <div className="empty">
-          <Sprite name="box" size={48} />
-          <b className="num" style={{ fontSize: 46, lineHeight: 1 }}>
-            404
-          </b>
-          <span>A página que você procura não existe ou foi movida.</span>
-          <Link to="/" className="btn primary">
-            Ir para o PDV
-          </Link>
-        </div>
-      </Win>
-    </Desk>
+    // Rendered inside the main window (the root <Outlet />), so no desktop of its own.
+    <div className="empty">
+      <Sprite name="box" size={48} />
+      <b className="num" style={{ fontSize: 46, lineHeight: 1 }}>
+        404
+      </b>
+      <span>A página que você procura não existe ou foi movida.</span>
+      <Link to="/" className="btn primary">
+        Ir para o PDV
+      </Link>
+    </div>
   );
 }
 
@@ -245,9 +242,11 @@ function Taskbar({
         </button>
         <div className="task-sep" aria-hidden="true" />
         <div className="task-title sunken">{title}</div>
-        <div className="tray sunken" role="status" aria-live="polite">
+        <div className="tray sunken">
           <span className={cn("led", !online && "off")} />
-          <span className="st">{status}</span>
+          <span className="st" role="status" aria-live="polite">
+            {status}
+          </span>
           <LangButtons />
           <span className="clock num">{clock}</span>
         </div>
@@ -620,8 +619,12 @@ function RootShellContent() {
     if (!shellActive) return;
     const onKey = (e: KeyboardEvent) => {
       const tab = tabsRef.current[FKEYS.indexOf(e.key)];
-      if (!tab || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (!tab || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       e.preventDefault();
+      // Not while a dialog is open (an unsaved form would be thrown away), nor on key
+      // repeat, nor to the tab already on screen.
+      if (e.repeat || document.querySelector('[role="dialog"]')) return;
+      if (router.state.location.pathname === tab.to) return;
       void router.navigate({ to: tab.to });
     };
     document.addEventListener("keydown", onKey);

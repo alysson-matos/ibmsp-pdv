@@ -207,8 +207,14 @@ function PdvPage() {
         ? prev.map((l) => (l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l))
         : [...prev, { product, quantity: 1 }],
     );
-    const id = ++plusSeq.current;
-    setPluses((list) => [...list, { id, text: "+" + brl(product.price) }]);
+    // The floater removes itself when its animation ends, so it is only added when
+    // animations run.
+    if (!reducedMotion()) {
+      const id = ++plusSeq.current;
+      setPluses((list) => [...list, { id, text: "+" + brl(product.price) }]);
+    }
+    // Keep the scanner ready: a barcode read right after a tap must not land on the card.
+    focusScanner();
 
     const box = document.getElementById("cartBox")?.getBoundingClientRect();
     const cartVisible = box ? box.top < innerHeight && box.bottom > 0 : false;
@@ -217,21 +223,32 @@ function PdvPage() {
     else replay(target, "bump");
   }
 
-  function handleScanSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const code = scan.trim();
-    if (!code) return;
-
+  /**
+   * Adds the product with this exact barcode or, from the 2nd character typed, the only
+   * product whose name or code contains the text. Returns false when nothing matches.
+   */
+  function submitCode(code: string): boolean {
+    const term = normalize(code);
     const byBarcode = activeProducts.find((p) => p.barcode === code);
-    const match = byBarcode ?? (matches.length === 1 ? matches[0] : undefined);
+    const found =
+      code.length >= 2
+        ? activeProducts.filter((p) => normalize(p.name).includes(term) || p.barcode.includes(term))
+        : [];
+    const match = byBarcode ?? (found.length === 1 ? found[0] : undefined);
 
     if (!match) {
       replay(scanRef.current, "shake");
       toast.error(t('Produto não encontrado para "{code}"', { code }));
-      return;
+      return false;
     }
     addProduct(match, document.querySelector<HTMLElement>(`[data-product="${match.id}"]`));
-    setScan("");
+    return true;
+  }
+
+  function handleScanSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const code = scan.trim();
+    if (code && submitCode(code)) setScan("");
   }
 
   function setQuantity(line: CartLine, quantity: number) {
@@ -335,8 +352,35 @@ function PdvPage() {
     requestAnimationFrame(focusScanner);
   }
 
-  const shortcutRef = useRef({ finalize, newSale, balanceEnabled });
-  shortcutRef.current = { finalize, newSale, balanceEnabled };
+  const shortcutRef = useRef({ finalize, newSale, submitCode, balanceEnabled });
+  shortcutRef.current = { finalize, newSale, submitCode, balanceEnabled };
+
+  // While the receipt is open, a barcode read starts the next sale: the digits are
+  // collected here (the dialog holds the focus) and Enter closes the receipt and adds
+  // the product, instead of only pressing "Próxima venda" and losing the scan.
+  const receiptOpen = !!lastSale;
+  useEffect(() => {
+    if (!receiptOpen) return;
+    let buffer = "";
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key.length === 1 && e.key !== " ") {
+        e.preventDefault();
+        buffer += e.key;
+        return;
+      }
+      if (e.key === "Enter" && buffer) {
+        e.preventDefault();
+        e.stopPropagation();
+        const code = buffer;
+        buffer = "";
+        shortcutRef.current.newSale();
+        if (!shortcutRef.current.submitCode(code)) setScan(code);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [receiptOpen]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -825,6 +869,14 @@ function CartRow({
           </button>
         </div>
         <span className="lt">{brl(p.price * quantity)}</span>
+        <button
+          type="button"
+          className="rm"
+          aria-label={`${t("Remover item")}: ${p.name}`}
+          onClick={() => onQuantity(line, 0)}
+        >
+          ×
+        </button>
       </motion.div>
     </motion.div>
   );
@@ -875,11 +927,17 @@ function Receipt({ sale, storeName, onNew }: { sale: Sale; storeName: string; on
         <div className="r">
           <span>{t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)}</span>
           <span>
-            {sale.payment_method === "dinheiro" && sale.amount_received != null
+            {sale.payment_method === "dinheiro" && sale.amount_received == null
               ? `${t("Troco").toLowerCase()} ${brl(sale.change_amount)}`
               : ""}
           </span>
         </div>
+        {sale.payment_method === "dinheiro" && sale.amount_received != null && (
+          <div className="r">
+            <span>{t("Recebido {value} · Troco", { value: brl(sale.amount_received) })}</span>
+            <span>{brl(sale.change_amount)}</span>
+          </div>
+        )}
         {sale.customer_balance_after != null && (
           <div className="r">
             <span>{t("Saldo restante de {name}", { name: sale.customer_name })}</span>
