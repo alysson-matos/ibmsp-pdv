@@ -47,6 +47,8 @@ export type Database = {
       customer_balance_movements: {
         Row: {
           balance_after: number
+          client_fingerprint: string | null
+          client_key: string | null
           created_at: string
           customer_id: string
           delta: number
@@ -56,6 +58,8 @@ export type Database = {
         }
         Insert: {
           balance_after: number
+          client_fingerprint?: string | null
+          client_key?: string | null
           created_at?: string
           customer_id: string
           delta: number
@@ -65,6 +69,8 @@ export type Database = {
         }
         Update: {
           balance_after?: number
+          client_fingerprint?: string | null
+          client_key?: string | null
           created_at?: string
           customer_id?: string
           delta?: number
@@ -273,6 +279,8 @@ export type Database = {
         Row: {
           amount_received: number | null
           change_amount: number
+          client_fingerprint: string | null
+          client_key: string | null
           created_at: string
           customer_id: string | null
           customer_name: string
@@ -290,6 +298,8 @@ export type Database = {
         Insert: {
           amount_received?: number | null
           change_amount?: number
+          client_fingerprint?: string | null
+          client_key?: string | null
           created_at?: string
           customer_id?: string | null
           customer_name?: string
@@ -307,6 +317,8 @@ export type Database = {
         Update: {
           amount_received?: number | null
           change_amount?: number
+          client_fingerprint?: string | null
+          client_key?: string | null
           created_at?: string
           customer_id?: string | null
           customer_name?: string
@@ -433,6 +445,7 @@ export type Database = {
           id: string
           logo: string | null
           name: string
+          retro_look: boolean
           skip_shipping: boolean
           sort_order: number
           updated_at: string
@@ -446,6 +459,7 @@ export type Database = {
           id?: string
           logo?: string | null
           name: string
+          retro_look?: boolean
           skip_shipping?: boolean
           sort_order?: number
           updated_at?: string
@@ -459,6 +473,7 @@ export type Database = {
           id?: string
           logo?: string | null
           name?: string
+          retro_look?: boolean
           skip_shipping?: boolean
           sort_order?: number
           updated_at?: string
@@ -472,6 +487,7 @@ export type Database = {
     Functions: {
       adjust_customer_balance: {
         Args: {
+          _client_key?: string
           _customer_id: string
           _delta: number
           _reason?: string
@@ -482,6 +498,7 @@ export type Database = {
       checkout_sale: {
         Args: {
           _amount_received?: number
+          _client_key?: string
           _customer_id?: string
           _customer_name?: string
           _discount?: number

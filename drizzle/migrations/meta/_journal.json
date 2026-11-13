@@ -71,6 +71,13 @@
       "when": 1794800000000,
       "tag": "0009_credito_saldo_idempotente",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794800000001,
+      "tag": "0010_finalize_pending_register_migrations",
+      "breakpoints": true
     }
   ]
 }
