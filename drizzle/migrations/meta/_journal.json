@@ -50,6 +50,13 @@
       "when": 1794515306077,
       "tag": "0006_finalize_pending_direct_sale_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794600000000,
+      "tag": "0007_venda_idempotente",
+      "breakpoints": true
     }
   ]
 }

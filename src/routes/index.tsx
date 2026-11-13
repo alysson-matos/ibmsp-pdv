@@ -131,6 +131,9 @@ function PdvPage() {
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [pluses, setPluses] = useState<{ id: number; text: string }[]>([]);
   const plusSeq = useRef(0);
+  // Idempotency key of the sale in progress: created on the first attempt to finish and
+  // kept across retries, so a sale whose response was lost can't be recorded twice.
+  const saleKey = useRef<string | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
   const customerRef = useRef<HTMLInputElement>(null);
   const ctaRef = useRef<HTMLButtonElement>(null);
@@ -277,8 +280,10 @@ function PdvPage() {
       operator_id: string;
       discount: number;
       amount_received: number | null;
+      client_key?: string;
     }) => checkoutFn({ data: vars }),
     onSuccess: (sale) => {
+      saleKey.current = null;
       setLastSale(sale);
       setCart([]);
       setDiscount("");
@@ -329,7 +334,11 @@ function PdvPage() {
       toast.error(blocker || t("Adicione produtos ao carrinho"));
       return;
     }
+    // randomUUID only exists on secure pages (https or localhost); without it the sale
+    // goes through as before, just without the protection against duplicates.
+    saleKey.current ??= globalThis.crypto?.randomUUID?.() ?? null;
     mutation.mutate({
+      ...(saleKey.current ? { client_key: saleKey.current } : {}),
       items: cart.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
       payment_method: payment,
       customer_name: payWithBalance ? selectedCustomer!.name : customer.trim(),
@@ -341,6 +350,7 @@ function PdvPage() {
   }
 
   function newSale() {
+    saleKey.current = null;
     setCart([]);
     setScan("");
     setDiscount("");

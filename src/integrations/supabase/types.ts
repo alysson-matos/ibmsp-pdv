@@ -482,6 +482,7 @@ export type Database = {
       checkout_sale: {
         Args: {
           _amount_received?: number
+          _client_key?: string
           _customer_id?: string
           _customer_name?: string
           _discount?: number
