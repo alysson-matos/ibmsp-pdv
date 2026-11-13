@@ -7,22 +7,9 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  ScanBarcode,
-  Trash2,
-  Plus,
-  Minus,
-  Banknote,
-  CreditCard,
-  QrCode,
-  Wallet,
-  CheckCircle2,
-  ShoppingCart,
-  PiggyBank,
-  X,
-} from "lucide-react";
 
 import {
   checkout,
@@ -34,17 +21,16 @@ import {
   type Sale,
 } from "@/lib/pos.functions";
 import { brl, PAYMENT_LABEL } from "@/lib/format";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EASE_OUT, Seg, Sprite, useTween } from "@/components/retro";
+import { confetti, fly, reducedMotion, replay } from "@/lib/fx";
 import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
-import { useT } from "@/i18n";
+import { useLocale, useT } from "@/i18n";
 import { RouteError } from "@/components/route-error";
 import { prefetchQuiet } from "@/lib/prefetch";
 import { listCustomers, type Customer } from "@/lib/customers.functions";
 import { useCurrentStore } from "@/lib/use-current-store";
-
 
 const productsQuery = queryOptions({
   queryKey: ["products"],
@@ -75,7 +61,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "PDV - IBMemorial — Venda com leitor de código de barras" },
       {
         property: "og:description",
-        content: "Leitura de código de barras, carrinho, total e formas de pagamento em uma só tela.",
+        content:
+          "Leitura de código de barras, carrinho, total e formas de pagamento em uma só tela.",
       },
       { property: "og:url", content: "https://ibmsp-pdv.lovable.app/" },
       { property: "og:image", content: `https://ibmsp-pdv.lovable.app${logoAsset.url}` },
@@ -103,13 +90,18 @@ function NotFound() {
 
 type CartLine = { product: Product; quantity: number };
 
-const paymentIcons: Record<PaymentMethod, typeof Banknote> = {
-  dinheiro: Banknote,
-  debito: CreditCard,
-  credito: Wallet,
-  pix: QrCode,
-  saldo: PiggyBank,
-};
+/** How many product cards are drawn at once; the search narrows the rest down. */
+const MAX_CARDS = 60;
+const LINE = { duration: 0.2, ease: EASE_OUT };
+const QUICK_CASH = [10, 20, 50, 100];
+
+const parseMoney = (text: string) => Number(text.replace(",", ".")) || 0;
+const moneyInput = (value: number) => value.toFixed(2).replace(".", ",");
+
+/** Lowercase without accents, so "joao" finds "João". */
+function normalize(text: string) {
+  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
 
 function PdvPage() {
   const t = useT();
@@ -137,14 +129,16 @@ function PdvPage() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [operatorId, setOperatorId] = useState("");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
+  const [pluses, setPluses] = useState<{ id: number; text: string }[]>([]);
+  const plusSeq = useRef(0);
   const scanRef = useRef<HTMLInputElement>(null);
   const customerRef = useRef<HTMLInputElement>(null);
+  const ctaRef = useRef<HTMLButtonElement>(null);
 
   const focusScanner = () => scanRef.current?.focus();
   useEffect(() => {
-    focusScanner();
+    if (!lastSale) focusScanner();
   }, [lastSale]);
-
 
   const activeOperators = useMemo(() => operators.filter((o) => o.active), [operators]);
 
@@ -158,54 +152,69 @@ function PdvPage() {
     if (typeof window !== "undefined") localStorage.setItem(OPERATOR_STORAGE_KEY, id);
   }
 
-  const activeProducts = useMemo(() => products.filter((p) => p.active), [products]);
+  const activeProducts = useMemo(
+    () =>
+      products
+        .filter((p) => p.active)
+        .sort((a, b) => Number(b.stock > 0) - Number(a.stock > 0) || a.name.localeCompare(b.name)),
+    [products],
+  );
 
-  const suggestions = useMemo(() => {
-    const term = scan.trim().toLowerCase();
-    if (term.length < 2) return [];
-    return activeProducts
-      .filter((p) => p.name.toLowerCase().includes(term) || p.barcode.includes(term))
-      .slice(0, 6);
+  // What the search box matches: every product while it's empty.
+  const matches = useMemo(() => {
+    const term = normalize(scan.trim());
+    if (!term) return activeProducts;
+    return activeProducts.filter(
+      (p) => normalize(p.name).includes(term) || p.barcode.includes(term),
+    );
   }, [scan, activeProducts]);
+  const shown = matches.slice(0, MAX_CARDS);
 
   const subtotal = cart.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
-  const discountValue = Math.min(Math.max(Number(discount.replace(",", ".")) || 0, 0), subtotal);
+  const discountValue = Math.min(Math.max(parseMoney(discount), 0), subtotal);
   const total = subtotal - discountValue;
-  const receivedValue = Number(received.replace(",", ".")) || 0;
+  const receivedValue = parseMoney(received);
   const change = payment === "dinheiro" && receivedValue > 0 ? receivedValue - total : 0;
+  const itemCount = cart.reduce((sum, l) => sum + l.quantity, 0);
+  const shownTotal = useTween(Math.round(total * 100), 240) / 100;
 
   const payWithBalance = payment === "saldo";
   const selectedCustomer = payWithBalance
     ? (customers.find((c) => c.id === customerId && c.active) ?? null)
     : null;
   const balanceShort = selectedCustomer ? selectedCustomer.balance < total : false;
-  const buyerMissing = payWithBalance ? !selectedCustomer : !customer.trim();
 
-  function addProduct(product: Product) {
-    setLastSale(null);
-    setCart((prev) => {
-      const existing = prev.find((l) => l.product.id === product.id);
-      const currentQty = existing?.quantity ?? 0;
-      if (product.stock <= 0) {
-        toast.error(t("{name} está sem estoque e não pode ser vendido", { name: product.name }));
-        return prev;
-      }
-      if (currentQty + 1 > product.stock) {
-        toast.error(
-          t("Estoque insuficiente: restam {stock} un. de {name}", {
-            stock: product.stock,
-            name: product.name,
-          }),
-        );
-        return prev;
-      }
-      if (existing) {
-        return prev.map((l) =>
-          l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l,
-        );
-      }
-      return [...prev, { product, quantity: 1 }];
-    });
+  /** Adds one unit. `card` is the product card that was tapped: its picture flies to the order. */
+  function addProduct(product: Product, card?: HTMLElement | null) {
+    const inCart = cart.find((l) => l.product.id === product.id)?.quantity ?? 0;
+    if (product.stock <= 0) {
+      replay(card, "shake");
+      toast.error(t("{name} está sem estoque e não pode ser vendido", { name: product.name }));
+      return;
+    }
+    if (inCart + 1 > product.stock) {
+      replay(card, "shake");
+      toast.error(
+        t("Estoque insuficiente: restam {stock} un. de {name}", {
+          stock: product.stock,
+          name: product.name,
+        }),
+      );
+      return;
+    }
+    setCart((prev) =>
+      prev.some((l) => l.product.id === product.id)
+        ? prev.map((l) => (l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l))
+        : [...prev, { product, quantity: 1 }],
+    );
+    const id = ++plusSeq.current;
+    setPluses((list) => [...list, { id, text: "+" + brl(product.price) }]);
+
+    const box = document.getElementById("cartBox")?.getBoundingClientRect();
+    const cartVisible = box ? box.top < innerHeight && box.bottom > 0 : false;
+    const target = document.getElementById(cartVisible ? "cartIcon" : "miniIcon");
+    if (card) fly(card.querySelector("img"), target, () => replay(target, "bump"));
+    else replay(target, "bump");
   }
 
   function handleScanSubmit(e: React.FormEvent) {
@@ -214,32 +223,31 @@ function PdvPage() {
     if (!code) return;
 
     const byBarcode = activeProducts.find((p) => p.barcode === code);
-    const match = byBarcode ?? (suggestions.length === 1 ? suggestions[0] : undefined);
+    const match = byBarcode ?? (matches.length === 1 ? matches[0] : undefined);
 
     if (!match) {
+      replay(scanRef.current, "shake");
       toast.error(t('Produto não encontrado para "{code}"', { code }));
       return;
     }
-    addProduct(match);
+    addProduct(match, document.querySelector<HTMLElement>(`[data-product="${match.id}"]`));
     setScan("");
   }
 
-  function setQuantity(productId: string, quantity: number) {
+  function setQuantity(line: CartLine, quantity: number) {
+    if (quantity > line.product.stock) {
+      toast.error(
+        t("Restam apenas {stock} un. de {name}", {
+          stock: line.product.stock,
+          name: line.product.name,
+        }),
+      );
+      return;
+    }
     setCart((prev) =>
-      prev.flatMap((l) => {
-        if (l.product.id !== productId) return [l];
-        if (quantity <= 0) return [];
-        if (quantity > l.product.stock) {
-          toast.error(
-            t("Restam apenas {stock} un. de {name}", {
-              stock: l.product.stock,
-              name: l.product.name,
-            }),
-          );
-          return [l];
-        }
-        return [{ ...l, quantity }];
-      }),
+      prev.flatMap((l) =>
+        l.product.id !== line.product.id ? [l] : quantity <= 0 ? [] : [{ ...l, quantity }],
+      ),
     );
   }
 
@@ -265,39 +273,43 @@ function PdvPage() {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["shipping"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
-      toast.success(t("Venda finalizada!"));
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => {
+      replay(ctaRef.current, "shake");
+      toast.error(error.message);
+    },
   });
 
+  /** Why the sale can't be finished yet (shown on the button itself), or null. */
+  const blocker: string | null =
+    cart.length === 0
+      ? ""
+      : !operatorId
+        ? t("Selecione o operador")
+        : payWithBalance && !selectedCustomer
+          ? t("Escolha o cliente")
+          : payWithBalance && balanceShort
+            ? t("Saldo insuficiente")
+            : !payWithBalance && !customer.trim()
+              ? t("Informe o nome do comprador")
+              : payment === "dinheiro" && received && receivedValue < total
+                ? t("Valor recebido menor que o total")
+                : null;
+  const canFinish = blocker === null && !mutation.isPending;
+
+  // Sheen: crosses the button once when it becomes enabled.
+  const [sheen, setSheen] = useState(0);
+  const wasReady = useRef(canFinish);
+  useEffect(() => {
+    if (canFinish && !wasReady.current) setSheen((k) => k + 1);
+    wasReady.current = canFinish;
+  }, [canFinish]);
+
   function finalize() {
-    if (cart.length === 0) {
-      toast.error(t("Adicione produtos ao carrinho"));
-      return;
-    }
-    if (payWithBalance && !selectedCustomer) {
-      toast.error(t("Selecione o cliente para pagar com saldo"));
-      return;
-    }
-    if (payWithBalance && balanceShort) {
-      toast.error(
-        t("Saldo insuficiente: {name} tem {balance}", {
-          name: selectedCustomer!.name,
-          balance: brl(selectedCustomer!.balance),
-        }),
-      );
-      return;
-    }
-    if (!payWithBalance && !customer.trim()) {
-      toast.error(t("Informe o nome do comprador"));
-      return;
-    }
-    if (!operatorId) {
-      toast.error(t("Selecione o operador da venda"));
-      return;
-    }
-    if (payment === "dinheiro" && received && receivedValue < total) {
-      toast.error(t("Valor recebido menor que o total"));
+    if (mutation.isPending) return;
+    if (blocker !== null) {
+      replay(ctaRef.current, "shake");
+      toast.error(blocker || t("Adicione produtos ao carrinho"));
       return;
     }
     mutation.mutate({
@@ -328,6 +340,24 @@ function PdvPage() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      // "/" jumps to the search and Ctrl+Enter finishes, as on the register keyboard.
+      const tag = (document.activeElement as HTMLElement | null)?.tagName ?? "";
+      if (
+        e.key === "/" &&
+        !e.altKey &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !/INPUT|SELECT|TEXTAREA/.test(tag)
+      ) {
+        e.preventDefault();
+        scanRef.current?.focus();
+        return;
+      }
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        shortcutRef.current.finalize();
+        return;
+      }
       if (e.metaKey) return;
       const isMac = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
       // Alt (Option on Mac) or, on Mac only, Control as an alternative.
@@ -337,9 +367,18 @@ function PdvPage() {
       // Use the physical key (e.code): on Mac, Option changes e.key into
       // special characters (¡, ∫, ç, ƒ, dead keys), so e.key never matches.
       const codeMap: Record<string, string> = {
-        Digit1: "1", Digit2: "2", Digit3: "3", Digit4: "4",
-        Numpad1: "1", Numpad2: "2", Numpad3: "3", Numpad4: "4",
-        KeyB: "b", KeyC: "c", KeyF: "f", KeyN: "n",
+        Digit1: "1",
+        Digit2: "2",
+        Digit3: "3",
+        Digit4: "4",
+        Numpad1: "1",
+        Numpad2: "2",
+        Numpad3: "3",
+        Numpad4: "4",
+        KeyB: "b",
+        KeyC: "c",
+        KeyF: "f",
+        KeyN: "n",
       };
       const key = codeMap[e.code] ?? e.key.toLowerCase();
       const paymentByKey: Record<string, PaymentMethod> = {
@@ -379,392 +418,490 @@ function PdvPage() {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, []);
 
-
+  const items = (n: number) => `${n} ${n === 1 ? t("item") : t("itens")}`;
+  const term = scan.trim();
 
   return (
-    <main className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-[1fr_400px]">
+    <>
       <h1 className="sr-only">{t("PDV")} - IBMemorial</h1>
-
-
-
-
-      <section className="flex flex-col gap-4">
-        <form
-          onSubmit={handleScanSubmit}
-          className="rounded-xl border border-border bg-card p-4 shadow-lg"
-        >
-          <Label htmlFor="scan" className="text-xs uppercase tracking-widest text-muted-foreground">
-            {t("Leitor de código de barras")}
-          </Label>
-          <div className="mt-2 flex items-center gap-3 rounded-lg border-2 border-primary/40 bg-background px-3 focus-within:border-primary">
-            <ScanBarcode className="size-6 shrink-0 text-primary" />
-            <Input
+      <div className="pos">
+        <section aria-label={t("Produtos")}>
+          <form onSubmit={handleScanSubmit} className="scanbar">
+            <input
               id="scan"
               ref={scanRef}
+              className="input"
+              type="search"
               autoFocus
               autoComplete="off"
               value={scan}
               onChange={(e) => setScan(e.target.value)}
-              placeholder={t("Passe o produto no leitor ou digite o código / nome")}
-              className="tabular h-14 border-0 bg-transparent text-lg shadow-none focus-visible:ring-0"
+              placeholder={t("Passe o produto no leitor ou digite o código / nome") + "  ( / )"}
+              aria-label={t("Leitor de código de barras")}
             />
-            <Button type="submit" size="sm" className="shrink-0">
+            <button type="submit" className="btn blue">
+              <Sprite name="scan" size={22} />
               {t("Adicionar")}
-            </Button>
-          </div>
+            </button>
+          </form>
 
-          {suggestions.length > 0 && (
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {suggestions.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      addProduct(p);
-                      setScan("");
-                      focusScanner();
-                    }}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-left transition-colors hover:border-primary/60 hover:bg-secondary"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">{p.name}</span>
-                      <span className="tabular block text-xs text-muted-foreground">{p.barcode}</span>
-                    </span>
-                    <span className="tabular text-sm font-semibold text-primary">{brl(p.price)}</span>
-                  </button>
-                </li>
+          <h2 className="cathead" key={term ? "busca" : "todos"}>
+            <Sprite name={term ? "scan" : "tag"} size={30} />
+            {term ? t("Resultado da busca") : t("Produtos")}
+            <span className="n">{items(matches.length)}</span>
+          </h2>
+          {shown.length ? (
+            <div className="prod-grid">
+              {shown.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  inCart={cart.find((l) => l.product.id === p.id)?.quantity ?? 0}
+                  onAdd={addProduct}
+                />
               ))}
-            </ul>
-          )}
-        </form>
-
-        <div className="min-h-[320px] rounded-xl border border-border bg-card shadow-lg">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest">
-              <ShoppingCart className="size-4 text-primary" /> {t("Carrinho")}
-            </h2>
-            {cart.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={() => setCart([])}>
-                {t("Limpar")}
-              </Button>
-            )}
-          </div>
-
-          {cart.length === 0 ? (
-            <div className="grid place-items-center gap-2 px-4 py-16 text-center text-muted-foreground">
-              <ScanBarcode className="size-10 opacity-40" />
-              <p className="text-sm">{t("Nenhum item. Passe o primeiro produto no leitor.")}</p>
             </div>
           ) : (
-            <ul className="divide-y divide-border">
-              {cart.map((line) => (
-                <li key={line.product.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{line.product.name}</p>
-                    <p className="tabular text-xs text-muted-foreground">
-                      {line.product.barcode} · {brl(line.product.price)} un.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-8"
-                      onClick={() => setQuantity(line.product.id, line.quantity - 1)}
-                      aria-label={t("Diminuir quantidade")}
-                    >
-                      <Minus className="size-4" />
-                    </Button>
-                    <span className="tabular w-8 text-center text-base font-semibold">
-                      {line.quantity}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-8"
-                      onClick={() => setQuantity(line.product.id, line.quantity + 1)}
-                      aria-label={t("Aumentar quantidade")}
-                    >
-                      <Plus className="size-4" />
-                    </Button>
-                  </div>
-                  <span className="tabular w-24 text-right font-semibold">
-                    {brl(line.product.price * line.quantity)}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => setQuantity(line.product.id, 0)}
-                    aria-label={t("Remover item")}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            <div className="empty">
+              <Sprite name="scan" size={40} style={{ opacity: 0.5 }} />
+              {term
+                ? t('Nenhum produto com "{term}".', { term })
+                : t("Nenhum produto ativo. Cadastre os produtos no Inventário.")}
+            </div>
           )}
-        </div>
-
-        {lastSale && <Receipt sale={lastSale} onNew={newSale} />}
-      </section>
-
-      <aside className="flex h-fit flex-col gap-4 lg:sticky lg:top-[4.5rem]">
-        <div className="rounded-xl border border-border bg-card p-4 shadow-lg">
-          <Label htmlFor="operator" className="text-xs uppercase tracking-widest text-muted-foreground">
-            {t("Operador da venda")} <span className="text-destructive">*</span>
-          </Label>
-
-          {activeOperators.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("Nenhum operador cadastrado.")}{" "}
-              <Link to="/operadores" className="text-primary underline">
-                {t("Cadastrar operadores")}
-              </Link>
+          {matches.length > shown.length ? (
+            <p className="hint mt-3">
+              {t("Mostrando {shown} de {total}. Digite o nome ou o código para achar os outros.", {
+                shown: shown.length,
+                total: matches.length,
+              })}
             </p>
-          ) : (
-            <select
-              id="operator"
-              required
-              aria-required="true"
-              aria-invalid={!operatorId}
-              value={operatorId}
-              onChange={(e) => chooseOperator(e.target.value)}
-              className={cn(
-                "mt-2 h-[3.75rem] w-full rounded-lg border-2 bg-background px-3 text-base",
-                operatorId ? "border-primary/40" : "border-destructive/60",
-              )}
-            >
-              <option value="">{t("Selecione o operador")}</option>
-              {activeOperators.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
+          ) : null}
+        </section>
+
+        <aside className="cart bevel" id="cartBox" aria-label={t("Pedido")}>
+          <div className="cart-head">
+            <Sprite id="cartIcon" name="cart" size={24} />
+            {t("PEDIDO")}
+            {cart.length > 0 && (
+              <button type="button" onClick={() => setCart([])}>
+                {t("Limpar")}
+              </button>
+            )}
+            <span className="count">{items(itemCount)}</span>
+          </div>
+          <div className="cart-body sunken">
+            <AnimatePresence initial={false}>
+              {cart.map((line) => (
+                <CartRow key={line.product.id} line={line} onQuantity={setQuantity} />
               ))}
-            </select>
-          )}
-          {!operatorId && activeOperators.length > 0 && (
-            <p className="mt-2 text-xs text-destructive">{t("Obrigatório selecionar o operador.")}</p>
-
-          )}
-        </div>
-
-        <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-lg">
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{t("Subtotal")}</span>
-            <span className="tabular">{brl(subtotal)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-            <Label htmlFor="discount">{t("Desconto")}</Label>
-            <Input
-              id="discount"
-              inputMode="decimal"
-              value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
-              placeholder={t("0,00")}
-              className="tabular h-8 w-28 text-right"
-            />
-          </div>
-        </div>
-
-        <div className="rounded-lg bg-secondary/60 p-4">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("Total a pagar")}</p>
-          <p className="tabular mt-1 text-4xl font-bold text-primary">{brl(total)}</p>
-        </div>
-
-        {!balanceEnabled && (
-        <div>
-          <p className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
-            {t("Forma de pagamento")}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {paymentMethods.map((method, idx) => {
-              const Icon = paymentIcons[method];
-              return (
-                <button
-                  key={method}
-                  type="button"
-                  title={t("Atalho: Alt+{n}", { n: idx + 1 })}
-                  onClick={() => setPayment(method)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
-                    payment === method
-                      ? "border-primary bg-primary/15 text-primary"
-                      : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <Icon className="size-4" />
-                  {t(PAYMENT_LABEL[method] ?? method)}
-                  <kbd className="ml-auto rounded border border-border px-1 text-[10px] text-muted-foreground">
-                    {t("Alt+{n}", { n: idx + 1 })}
-                  </kbd>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        )}
-
-
-        {payWithBalance ? (
-          <CustomerBalancePicker
-            customers={customers}
-            selected={selectedCustomer}
-            search={customer}
-            onSearch={setCustomer}
-            onSelect={(c) => {
-              setCustomerId(c?.id ?? null);
-              setCustomer(c ? c.name : "");
-            }}
-            total={total}
-            inputRef={customerRef}
-          />
-        ) : (
-          <div className="space-y-2">
-            <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
-              {t("Nome do comprador")} <span className="text-destructive">*</span>{" "}
-              <kbd className="rounded border border-border px-1 text-[10px] normal-case">{t("Alt+C")}</kbd>
-            </Label>
-            <Input
-              id="customer"
-              ref={customerRef}
-
-              required
-              aria-required="true"
-              aria-invalid={!customer.trim()}
-              value={customer}
-              onChange={(e) => setCustomer(e.target.value)}
-              placeholder={t("Quem vai retirar os produtos")}
-              className={cn("h-11", !customer.trim() && "border-destructive/60")}
-            />
-            {!customer.trim() && (
-              <p className="text-xs text-destructive">{t("Obrigatório informar o comprador.")}</p>
+            </AnimatePresence>
+            {cart.length === 0 && (
+              <div className="empty">
+                <Sprite name="cart" size={40} style={{ opacity: 0.5 }} />
+                <span>{t("Toque nos produtos ou passe no leitor para montar o pedido.")}</span>
+              </div>
             )}
           </div>
-        )}
-
-        {payment === "dinheiro" && (
-          <div className="space-y-2 rounded-lg border border-border p-3">
-            <Label htmlFor="received" className="text-xs uppercase tracking-widest text-muted-foreground">
-              {t("Valor recebido")}
-            </Label>
-            <Input
-              id="received"
-              inputMode="decimal"
-              value={received}
-              onChange={(e) => setReceived(e.target.value)}
-              placeholder={t("0,00")}
-              className="tabular h-11 text-lg"
-            />
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t("Troco")}</span>
-              <span className={cn("tabular font-semibold", change < 0 && "text-destructive")}>
-                {brl(Math.max(change, 0))}
+          <div className="cart-total">
+            <span className="label">{t("Total a pagar")}</span>
+            <span className="big num" aria-live="polite">
+              {brl(shownTotal)}
+            </span>
+            {pluses.map((p) => (
+              <span
+                key={p.id}
+                className="plus"
+                aria-hidden="true"
+                onAnimationEnd={() => setPluses((list) => list.filter((x) => x.id !== p.id))}
+              >
+                {p.text}
               </span>
+            ))}
+          </div>
+
+          <div className="pay">
+            <label className="field" htmlFor="operator">
+              <span>
+                {t("Operador da venda")} <span className="text-destructive">*</span>
+              </span>
+              {activeOperators.length === 0 ? (
+                <span className="hint font-medium">
+                  {t("Nenhum operador cadastrado.")}{" "}
+                  <Link to="/operadores" className="text-navy underline">
+                    {t("Cadastrar operadores")}
+                  </Link>
+                </span>
+              ) : (
+                <select
+                  id="operator"
+                  className="input"
+                  required
+                  aria-required="true"
+                  aria-invalid={!operatorId}
+                  value={operatorId}
+                  onChange={(e) => chooseOperator(e.target.value)}
+                >
+                  <option value="">{t("Selecione o operador")}</option>
+                  {activeOperators.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </label>
+
+            <div className="payrow">
+              <span>{t("Subtotal")}</span>
+              <span className="num">{brl(subtotal)}</span>
+            </div>
+            <label className="payrow" htmlFor="discount">
+              <span>{t("Desconto")}</span>
+              <input
+                id="discount"
+                className="input num"
+                inputMode="decimal"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                placeholder={t("0,00")}
+                style={{ width: 120, textAlign: "right", fontSize: 20 }}
+              />
+            </label>
+
+            {!balanceEnabled && (
+              <Seg
+                options={paymentMethods.map((m) => [m, t(PAYMENT_LABEL[m] ?? m)] as const)}
+                value={payment}
+                onChange={setPayment}
+                label={t("Forma de pagamento")}
+              />
+            )}
+
+            <div className="paypanel">
+              {payWithBalance ? (
+                <CustomerBalancePicker
+                  customers={customers}
+                  selected={selectedCustomer}
+                  search={customer}
+                  onSearch={setCustomer}
+                  onSelect={(c) => {
+                    setCustomerId(c?.id ?? null);
+                    setCustomer(c ? c.name : "");
+                  }}
+                  total={total}
+                  inputRef={customerRef}
+                />
+              ) : (
+                <label className="field" htmlFor="customer">
+                  <span>
+                    {t("Nome do comprador")} <span className="text-destructive">*</span>{" "}
+                    <kbd>{t("Alt+C")}</kbd>
+                  </span>
+                  <input
+                    id="customer"
+                    ref={customerRef}
+                    className="input"
+                    required
+                    aria-required="true"
+                    aria-invalid={cart.length > 0 && !customer.trim()}
+                    value={customer}
+                    onChange={(e) => setCustomer(e.target.value)}
+                    placeholder={t("Quem vai retirar os produtos")}
+                  />
+                </label>
+              )}
+
+              {payment === "dinheiro" && (
+                <>
+                  <label className="field" htmlFor="received">
+                    {t("Valor recebido")}
+                    <input
+                      id="received"
+                      className="input num"
+                      inputMode="decimal"
+                      value={received}
+                      onChange={(e) => setReceived(e.target.value)}
+                      placeholder={t("0,00")}
+                      style={{ fontSize: 22 }}
+                    />
+                  </label>
+                  <div className="quick">
+                    {QUICK_CASH.map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className="btn sm"
+                        onClick={() => setReceived(moneyInput(v))}
+                      >
+                        {brl(v)}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn sm"
+                      onClick={() => setReceived(moneyInput(total))}
+                    >
+                      {t("Valor exato")}
+                    </button>
+                  </div>
+                  <div className="troco">
+                    <span>{t("Troco")}</span>
+                    <span className="num" style={{ color: change < 0 ? "var(--bad)" : undefined }}>
+                      {change < 0
+                        ? t("faltam {value}", { value: brl(-change) })
+                        : brl(Math.max(change, 0))}
+                    </span>
+                  </div>
+                </>
+              )}
+              {payment === "pix" && (
+                <div className="hint">{t("Confirme o Pix antes de finalizar.")}</div>
+              )}
+              {(payment === "credito" || payment === "debito") && (
+                <div className="hint">
+                  {t("Passe o cartão na maquininha e finalize depois da aprovação.")}
+                </div>
+              )}
+            </div>
+
+            <button
+              ref={ctaRef}
+              type="button"
+              className="btn primary cta"
+              disabled={!canFinish}
+              onClick={finalize}
+            >
+              {mutation.isPending
+                ? t("Finalizando...")
+                : blocker
+                  ? blocker
+                  : cart.length
+                    ? `${t("Finalizar venda")} · ${brl(total)}`
+                    : t("Finalizar venda")}
+              {sheen > 0 && <span key={sheen} className="sheen" aria-hidden="true" />}
+            </button>
+            <button type="button" className="btn" onClick={newSale}>
+              {t("Nova venda (Alt+N)")}
+            </button>
+
+            <div className="hint">
+              {balanceEnabled
+                ? t(
+                    "Atalhos: / busca · Ctrl+Enter ou Alt+F finaliza · Alt+C cliente · Alt+N nova venda",
+                  )
+                : t(
+                    "Atalhos: / busca · Ctrl+Enter ou Alt+F finaliza · Alt+1–4 pagamento · Alt+C comprador · Alt+N nova venda",
+                  )}
             </div>
           </div>
-        )}
+        </aside>
+      </div>
 
-        <Button
-          size="lg"
-          className="h-14 text-base font-semibold"
-          disabled={
-            cart.length === 0 ||
-            mutation.isPending ||
-            !operatorId ||
-            buyerMissing ||
-            (payWithBalance && balanceShort)
+      <div className="minibar">
+        <Sprite id="miniIcon" name="cart" size={24} />
+        <span>{items(itemCount)}</span>
+        <span className="num">{brl(shownTotal)}</span>
+        <button
+          type="button"
+          className="btn sm primary"
+          onClick={() =>
+            document
+              .getElementById("cartBox")
+              ?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" })
           }
-          onClick={finalize}
         >
-          {mutation.isPending ? t("Finalizando...") : t("Finalizar venda (Alt+F)")}
-        </Button>
+          {t("Pagar")}
+        </button>
+      </div>
 
-        <Button variant="outline" className="h-11" onClick={newSale}>
-          {t("Nova venda (Alt+N)")}
-        </Button>
-
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          {balanceEnabled
-            ? t("Atalhos: Alt+B leitor · Alt+C cliente · Alt+F finalizar · Alt+N nova venda")
-            : t(
-                "Atalhos: Alt+1 Crédito · Alt+2 Débito · Alt+3 Pix · Alt+4 Dinheiro · Alt+B leitor · Alt+C comprador · Alt+F finalizar · Alt+N nova venda",
-              )}
-        </p>
-
-        </div>
-      </aside>
-    </main>
+      <Dialog open={!!lastSale} onOpenChange={(open) => !open && newSale()}>
+        <DialogContent ok className="max-w-[440px]" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{t("Venda registrada")}</DialogTitle>
+          </DialogHeader>
+          {lastSale ? (
+            <Receipt sale={lastSale} storeName={store?.name ?? "PDV"} onNew={newSale} />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
-function Receipt({ sale, onNew }: { sale: Sale; onNew: () => void }) {
+function ProductCard({
+  product: p,
+  inCart,
+  onAdd,
+}: {
+  product: Product;
+  inCart: number;
+  onAdd: (product: Product, card: HTMLElement) => void;
+}) {
   const t = useT();
+  const out = p.stock <= 0;
+  const low = !out && p.stock <= p.min_stock;
+  const left = p.stock - inCart;
   return (
-    <div className="rounded-xl border border-accent/50 bg-accent/10 p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 font-semibold text-accent">
-          <CheckCircle2 className="size-5" /> {t("Venda registrada")}
-        </h2>
-        <Button size="sm" variant="outline" onClick={onNew}>
-          {t("Nova venda")}
-        </Button>
-      </div>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {t("Comprador")}: <span className="font-semibold text-foreground">{sale.customer_name}</span> ·{" "}
-        {t("Operador")}: <span className="font-semibold text-foreground">{sale.operator_name || "—"}</span> ·{" "}
-        {sale.status === "entregue" ? t("entregue ao cliente") : t("retirada na expedição")}
-      </p>
-      <ul className="mt-3 space-y-1 text-sm">
+    <button
+      type="button"
+      data-product={p.id}
+      className={cn("prod", low && "low")}
+      disabled={out}
+      onClick={(e) => onAdd(p, e.currentTarget)}
+      aria-label={`${p.name}, ${brl(p.price)}, ${
+        out ? t("esgotado") : t("{n} em estoque", { n: left })
+      }`}
+      title={p.barcode}
+    >
+      <span className={cn("in-cart", inCart > 0 && "on")} aria-hidden="true">
+        {inCart || ""}
+      </span>
+      <Sprite name="tag" />
+      <b>{p.name}</b>
+      <span className="price">{brl(p.price)}</span>
+      <span className="stk" aria-hidden="true">
+        {out ? t("ESGOTADO") : t("est {n}", { n: left })}
+      </span>
+    </button>
+  );
+}
+
+function CartRow({
+  line,
+  onQuantity,
+}: {
+  line: CartLine;
+  onQuantity: (line: CartLine, quantity: number) => void;
+}) {
+  const t = useT();
+  const { product: p, quantity } = line;
+  return (
+    <motion.div
+      style={{ overflow: "hidden" }}
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1, transition: LINE }}
+      exit={{ height: 0, opacity: 0, transition: LINE }}
+    >
+      <motion.div
+        className="line-in"
+        initial={{ x: -12 }}
+        animate={{ x: 0, transition: LINE }}
+        exit={{ x: 40, transition: LINE }}
+      >
+        <Sprite name="tag" size={28} />
+        <div>
+          <div className="nm">{p.name}</div>
+          <div className="sub">
+            {brl(p.price)} {t("un")}
+          </div>
+        </div>
+        <div className="qty">
+          <button
+            type="button"
+            aria-label={`${t("Diminuir quantidade")}: ${p.name}`}
+            onClick={() => onQuantity(line, quantity - 1)}
+          >
+            −
+          </button>
+          <span className="q" aria-live="polite">
+            <AnimatePresence initial={false} mode="popLayout">
+              <motion.span
+                key={quantity}
+                initial={{ y: "-70%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1, transition: LINE }}
+                exit={{ opacity: 0, transition: { duration: 0 } }}
+              >
+                {quantity}
+              </motion.span>
+            </AnimatePresence>
+          </span>
+          <button
+            type="button"
+            aria-label={`${t("Aumentar quantidade")}: ${p.name}`}
+            onClick={() => onQuantity(line, quantity + 1)}
+          >
+            +
+          </button>
+        </div>
+        <span className="lt">{brl(p.price * quantity)}</span>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function Receipt({ sale, storeName, onNew }: { sale: Sale; storeName: string; onNew: () => void }) {
+  const t = useT();
+  const locale = useLocale();
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const dlg = ref.current?.closest(".dlg")?.getBoundingClientRect();
+      if (dlg) confetti(dlg.left + dlg.width / 2, dlg.top + 40);
+    }, 80);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const when = new Date(sale.created_at);
+  return (
+    <>
+      <div className="receipt" ref={ref} aria-label={t("Comprovante")}>
+        <div className="hd">{storeName.toUpperCase()} · PDV</div>
+        <div className="r">
+          <span>
+            {when.toLocaleDateString(locale)}{" "}
+            {when.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
+          </span>
+          <span>#{sale.id.slice(0, 6).toUpperCase()}</span>
+        </div>
         {sale.items.map((item) => (
-          <li key={item.id} className="flex justify-between gap-4">
-            <span className="truncate">
+          <div className="r" key={item.id}>
+            <span>
               {item.quantity}× {item.product_name}
             </span>
-            <span className="tabular">{brl(item.subtotal)}</span>
-          </li>
+            <span>{brl(item.subtotal)}</span>
+          </div>
         ))}
-      </ul>
-      <div className="mt-3 border-t border-border pt-3 text-sm">
         {sale.discount > 0 && (
-          <div className="flex justify-between text-muted-foreground">
+          <div className="r">
             <span>{t("Desconto")}</span>
-            <span className="tabular">-{brl(sale.discount)}</span>
+            <span>-{brl(sale.discount)}</span>
           </div>
         )}
-        <div className="flex justify-between font-semibold">
-          <span>{t("Total")} · {t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)}</span>
-          <span className="tabular">{brl(sale.total)}</span>
+        <div className="r tot">
+          <span>{t("TOTAL")}</span>
+          <span>{brl(sale.total)}</span>
         </div>
-        {sale.payment_method === "dinheiro" && sale.amount_received != null && (
-          <div className="flex justify-between text-muted-foreground">
-            <span>{t("Recebido {value} · Troco", { value: brl(sale.amount_received) })}</span>
-            <span className="tabular">{brl(sale.change_amount)}</span>
-          </div>
-        )}
+        <div className="r">
+          <span>{t(PAYMENT_LABEL[sale.payment_method] ?? sale.payment_method)}</span>
+          <span>
+            {sale.payment_method === "dinheiro" && sale.amount_received != null
+              ? `${t("Troco").toLowerCase()} ${brl(sale.change_amount)}`
+              : ""}
+          </span>
+        </div>
         {sale.customer_balance_after != null && (
-          <div className="flex justify-between text-muted-foreground">
+          <div className="r">
             <span>{t("Saldo restante de {name}", { name: sale.customer_name })}</span>
-            <span className="tabular font-semibold text-foreground">
-              {brl(sale.customer_balance_after)}
-            </span>
+            <span>{brl(sale.customer_balance_after)}</span>
           </div>
         )}
       </div>
-    </div>
+      <div className="hint">
+        {t("Comprador")}: <b className="text-ink">{sale.customer_name}</b> · {t("Operador")}:{" "}
+        <b className="text-ink">{sale.operator_name || "—"}</b> ·{" "}
+        {sale.status === "entregue" ? t("entregue ao cliente") : t("retirada na expedição")}
+      </div>
+      <div className="dlg-actions">
+        <button type="button" className="btn primary" autoFocus onClick={onNew}>
+          {t("Próxima venda")}
+        </button>
+      </div>
+    </>
   );
 }
 
 const MIN_SEARCH = 3;
-
-/** Lowercase without accents, so "joao" finds "João". */
-function normalize(text: string) {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
 
 function CustomerBalancePicker({
   customers,
@@ -803,137 +940,109 @@ function CustomerBalancePicker({
     const after = selected.balance - total;
     const short = after < 0;
     return (
-      <div
-        className={cn(
-          "space-y-2 rounded-lg border-2 p-3",
-          short ? "border-destructive/60 bg-destructive/5" : "border-primary/40",
-        )}
-      >
-        <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              {t("Cliente")}
-            </p>
-            <p className="truncate text-base font-semibold">{selected.name}</p>
-            {selected.notes ? (
-              <p className="truncate text-xs text-muted-foreground">{selected.notes}</p>
-            ) : null}
+      <>
+        <div className="buyer">
+          <div className="min-w-0">
+            <div className="font-bold">{selected.name}</div>
+            {selected.notes ? <div className="hint truncate">{selected.notes}</div> : null}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0 text-muted-foreground"
-            aria-label={t("Trocar cliente")}
-            onClick={() => {
-              onSelect(null);
-              requestAnimationFrame(() => inputRef.current?.focus());
-            }}
-          >
-            <X className="size-4" />
-          </Button>
+          <div>
+            <div className="label text-right">{t("Saldo")}</div>
+            <div className="bal num">{brl(selected.balance)}</div>
+          </div>
+          <div className={cn("after", short && "neg")}>
+            <span>{short ? t("Saldo insuficiente — faltam") : t("Saldo após a compra")}</span>
+            <span className="num" style={{ fontSize: 18 }}>
+              {brl(Math.abs(after))}
+            </span>
+          </div>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">{t("Saldo disponível")}</span>
-          <span className="tabular text-lg font-bold text-primary">{brl(selected.balance)}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">{t("Saldo após a compra")}</span>
-          <span className={cn("tabular font-semibold", short && "text-destructive")}>
-            {brl(after)}
-          </span>
-        </div>
-        {short ? (
-          <p className="text-xs font-medium text-destructive">
-            {t("Saldo insuficiente. Faltam {value}.", { value: brl(-after) })}
-          </p>
-        ) : null}
-      </div>
+        <button
+          type="button"
+          className="btn sm"
+          style={{ justifySelf: "start" }}
+          onClick={() => {
+            onSelect(null);
+            requestAnimationFrame(() => inputRef.current?.focus());
+          }}
+        >
+          {t("Trocar cliente")}
+        </button>
+      </>
     );
   }
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor="customer" className="text-xs uppercase tracking-widest text-muted-foreground">
-        {t("Cliente")} <span className="text-destructive">*</span>{" "}
-        <kbd className="rounded border border-border px-1 text-[10px] normal-case">{t("Alt+C")}</kbd>
-      </Label>
-      <Input
-        id="customer"
-        ref={inputRef}
-        autoComplete="off"
-        role="combobox"
-        aria-expanded={matches.length > 0}
-        aria-controls="customer-suggestions"
-        value={search}
-        onChange={(e) => {
-          onSearch(e.target.value);
-          setHighlight(0);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowDown" && matches.length) {
-            e.preventDefault();
-            setHighlight((active + 1) % matches.length);
-          } else if (e.key === "ArrowUp" && matches.length) {
-            e.preventDefault();
-            setHighlight((active - 1 + matches.length) % matches.length);
-          } else if ((e.key === "Enter" || e.key === "Tab") && matches[active]) {
-            e.preventDefault();
-            onSelect(matches[active]);
-          }
-        }}
-        placeholder={t("Digite o nome do cliente")}
-        className="h-11 border-destructive/60"
-      />
+    <>
+      <label className="field" htmlFor="customer">
+        <span>
+          {t("Cliente")} <span className="text-destructive">*</span> <kbd>{t("Alt+C")}</kbd>
+        </span>
+        <input
+          id="customer"
+          ref={inputRef}
+          className="input"
+          type="search"
+          autoComplete="off"
+          role="combobox"
+          aria-expanded={matches.length > 0}
+          aria-controls="customer-suggestions"
+          value={search}
+          onChange={(e) => {
+            onSearch(e.target.value);
+            setHighlight(0);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown" && matches.length) {
+              e.preventDefault();
+              setHighlight((active + 1) % matches.length);
+            } else if (e.key === "ArrowUp" && matches.length) {
+              e.preventDefault();
+              setHighlight((active - 1 + matches.length) % matches.length);
+            } else if ((e.key === "Enter" || e.key === "Tab") && matches[active]) {
+              e.preventDefault();
+              onSelect(matches[active]);
+            }
+          }}
+          placeholder={t("Digite o nome do cliente")}
+        />
+      </label>
       {customers.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
+        <div className="hint">
           {t("Nenhum cliente cadastrado.")}{" "}
-          <Link to="/clientes" className="text-primary underline">
+          <Link to="/clientes" className="text-navy underline">
             {t("Cadastrar clientes")}
           </Link>
-        </p>
+        </div>
       ) : term.length < MIN_SEARCH ? (
-        <p className="text-xs text-muted-foreground">
-          {t("Digite pelo menos 3 letras para buscar.")}
-        </p>
+        <div className="hint">{t("Digite pelo menos 3 letras para buscar.")}</div>
       ) : matches.length === 0 ? (
-        <p className="text-xs text-destructive">{t("Nenhum cliente encontrado.")}</p>
+        <div className="hint font-bold text-destructive">{t("Nenhum cliente encontrado.")}</div>
       ) : (
-        <ul
-          id="customer-suggestions"
-          role="listbox"
-          className="divide-y divide-border overflow-hidden rounded-lg border border-border"
-        >
+        <div id="customer-suggestions" role="listbox" className="results" key={term}>
           {matches.map((c, idx) => (
-            <li key={c.id} role="option" aria-selected={idx === active}>
-              <button
-                type="button"
-                tabIndex={-1}
-                onMouseEnter={() => setHighlight(idx)}
-                onClick={() => onSelect(c)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors",
-                  idx === active ? "bg-secondary" : "hover:bg-secondary",
-                )}
-              >
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{c.name}</span>
-                  {c.notes ? (
-                    <span className="block truncate text-xs text-muted-foreground">{c.notes}</span>
-                  ) : null}
-                </span>
-                <span
-                  className={cn(
-                    "tabular shrink-0 font-semibold",
-                    c.balance < total ? "text-destructive" : "text-primary",
-                  )}
-                >
-                  {brl(c.balance)}
-                </span>
-              </button>
-            </li>
+            <button
+              key={c.id}
+              type="button"
+              role="option"
+              aria-selected={idx === active}
+              tabIndex={-1}
+              className={cn("res", c.balance < total && "low")}
+              style={{ animationDelay: `${Math.min(idx, 8) * 30}ms` }}
+              onMouseEnter={() => setHighlight(idx)}
+              onClick={() => onSelect(c)}
+            >
+              <span className="min-w-0 font-semibold">
+                {c.name}
+                {c.notes ? (
+                  <span className="hint block truncate font-medium">{c.notes}</span>
+                ) : null}
+              </span>
+              <span className="num">{brl(c.balance)}</span>
+            </button>
           ))}
-        </ul>
+        </div>
       )}
-    </div>
+    </>
   );
 }

@@ -233,15 +233,15 @@ function ImportPreview({
       </DialogHeader>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <div className="rounded-lg bg-secondary/60 px-3 py-2">
+        <div className="bg-secondary/60 px-3 py-2">
           <p className="text-xs text-muted-foreground">{t("Serão importados")}</p>
-          <p className="tabular text-xl font-bold text-primary">{valid.length}</p>
+          <p className="tabular text-xl font-bold text-navy">{valid.length}</p>
         </div>
-        <div className="rounded-lg bg-secondary/60 px-3 py-2">
+        <div className="bg-secondary/60 px-3 py-2">
           <p className="text-xs text-muted-foreground">{t("Saldo somado")}</p>
           <p className="tabular text-xl font-bold">{brl(totalBalance)}</p>
         </div>
-        <div className="rounded-lg bg-secondary/60 px-3 py-2">
+        <div className="bg-secondary/60 px-3 py-2">
           <p className="text-xs text-muted-foreground">{t("Ignorados")}</p>
           <p className={cn("tabular text-xl font-bold", skipped > 0 && "text-destructive")}>
             {skipped}
@@ -255,10 +255,10 @@ function ImportPreview({
         </p>
       ) : null}
 
-      <div className="mt-4 max-h-80 overflow-auto rounded-lg border border-border">
+      <div className="mt-4 max-h-80 overflow-auto border border-border">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-card">
-            <tr className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+            <tr className="thead-z">
               <th className="px-3 py-2 font-medium">{t("Linha")}</th>
               <th className="px-3 py-2 font-medium">{t("Nome")}</th>
               <th className="px-3 py-2 text-right font-medium">{t("Saldo")}</th>

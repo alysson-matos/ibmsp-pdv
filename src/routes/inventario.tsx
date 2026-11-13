@@ -239,11 +239,11 @@ function InventarioPage() {
   const lowStock = products.filter((p) => p.active && p.stock <= p.min_stock).length;
 
   return (
-    <main className="mx-auto max-w-[1600px] p-4">
+    <main className="w-full">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Boxes className="size-6 text-primary" /> {t("Inventário")}
+            <Boxes className="size-6 text-navy" /> {t("Inventário")}
           </h1>
           <p className="text-sm text-muted-foreground">
             {t("{count} produtos cadastrados", { count: products.length })}
@@ -269,9 +269,9 @@ function InventarioPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-lg">
+      <div className="overflow-x-auto panel">
         <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+          <thead className="thead-z">
             <tr>
               <SortableTh label={t("Produto")} sortKey="name" sort={sort} onToggle={toggleSort} />
               <SortableTh label={t("Código")} sortKey="barcode" sort={sort} onToggle={toggleSort} />
@@ -286,7 +286,7 @@ function InventarioPage() {
             {pagination.pageRows.map((p) => {
               const low = p.stock <= p.min_stock;
               return (
-                <tr key={p.id} className="hover:bg-secondary/30">
+                <tr key={p.id} className="hover:bg-[#FFF9D9]">
                   <td className="px-4 py-3 font-medium">{p.name}</td>
                   <td className="tabular px-4 py-3 text-muted-foreground">{p.barcode}</td>
                   <td className="tabular px-4 py-3 text-right">{brl(p.price)}</td>
@@ -329,7 +329,7 @@ function InventarioPage() {
                       className={cn(
                         "rounded-full px-2 py-0.5 text-xs",
                         p.active
-                          ? "bg-accent/20 text-accent"
+                          ? "pill ok"
                           : "bg-muted text-muted-foreground",
                       )}
                     >

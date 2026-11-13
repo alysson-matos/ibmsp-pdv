@@ -93,14 +93,14 @@ function LojasPage() {
   const [editingUser, setEditingUser] = useState<UserForm | null>(null);
 
   return (
-    <main className="mx-auto max-w-6xl p-4">
+    <main className="w-full">
       <StoreFonts fonts={stores.map((s) => s.font)} />
 
       <section>
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold">
-              <Store className="size-6 text-primary" /> {t("Lojas")}
+              <Store className="size-6 text-navy" /> {t("Lojas")}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {t("Cada loja tem seus próprios produtos, operadores, vendas e visual.")}
@@ -119,7 +119,7 @@ function LojasPage() {
             <div
               key={store.id}
               className={cn(
-                "relative flex items-center gap-4 overflow-hidden rounded-xl border-2 bg-card p-4 pt-5",
+                "relative flex items-center gap-4 overflow-hidden border-2 bg-card p-4 pt-5",
                 !store.active && "opacity-60",
               )}
               style={{ borderColor: store.color }}
@@ -157,7 +157,7 @@ function LojasPage() {
             </div>
           ))}
           {stores.length === 0 && (
-            <p className="col-span-full rounded-xl border border-border bg-card px-4 py-12 text-center text-muted-foreground">
+            <p className="col-span-full panel px-4 py-12 text-center text-muted-foreground">
               {t("Nenhuma loja cadastrada ainda.")}
             </p>
           )}
@@ -168,7 +168,7 @@ function LojasPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-bold">
-              <KeyRound className="size-6 text-primary" /> {t("Usuários e acessos")}
+              <KeyRound className="size-6 text-navy" /> {t("Usuários e acessos")}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {t(
@@ -231,7 +231,7 @@ function AccessMatrix({
 
   if (users.length === 0) {
     return (
-      <p className="mt-4 rounded-xl border border-border bg-card px-4 py-12 text-center text-muted-foreground">
+      <p className="mt-4 panel px-4 py-12 text-center text-muted-foreground">
         {t(
           "Nenhum usuário cadastrado ainda. Crie um usuário e marque as lojas que ele pode acessar.",
         )}
@@ -240,10 +240,10 @@ function AccessMatrix({
   }
 
   return (
-    <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card">
+    <div className="mt-4 overflow-x-auto panel">
       <table className="w-full min-w-max text-sm">
         <thead>
-          <tr className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+          <tr className="thead-z">
             <th className="sticky left-0 bg-card px-4 py-3 font-medium">{t("Usuário")}</th>
             {stores.map((s) => (
               <th key={s.id} className="px-3 py-3 font-medium">
@@ -281,10 +281,7 @@ function AccessMatrix({
                         role: (e.target.value || null) as MemberRole | null,
                       })
                     }
-                    className={cn(
-                      "h-9 rounded-md border border-border bg-background px-2 text-sm",
-                      !u.access[s.id] && "text-muted-foreground",
-                    )}
+                    className={cn("input w-auto", !u.access[s.id] && "text-muted-foreground")}
                   >
                     <option value="">{t("Sem acesso")}</option>
                     <option value="operacao">{t("Operação")}</option>
@@ -404,7 +401,7 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
 
       {/* Live preview */}
       <div
-        className="mt-4 overflow-hidden rounded-xl border-2 bg-background"
+        className="mt-4 overflow-hidden border-2 bg-background"
         style={{ borderColor: form.color, fontFamily: storeFontStack(form.font) }}
       >
         <div className="h-1.5" style={{ backgroundColor: form.color }} />
@@ -414,7 +411,7 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
             {previewName}
           </span>
           <span
-            className="ml-auto rounded-md px-3 py-1.5 text-sm font-semibold"
+            className="ml-auto px-3 py-1.5 text-sm font-semibold"
             style={{ backgroundColor: form.color, color: textOn(form.color) }}
           >
             {t("Finalizar venda")}
@@ -456,7 +453,7 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
                 type="color"
                 value={form.color}
                 onChange={(e) => setForm({ ...form, color: e.target.value })}
-                className="size-8 cursor-pointer rounded-md border border-border bg-transparent"
+                className="size-8 cursor-pointer border border-border bg-transparent"
               />
               {t("Outra")}
             </label>
@@ -474,9 +471,9 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
                 onClick={() => setForm({ ...form, font: key })}
                 aria-pressed={form.font === key}
                 className={cn(
-                  "rounded-md border px-3 py-1.5 text-sm transition-colors",
+                  "border px-3 py-1.5 text-sm transition-colors",
                   form.font === key
-                    ? "border-primary bg-secondary font-semibold text-foreground"
+                    ? "border-ink bg-[var(--z-yellow)] font-semibold text-foreground"
                     : "border-border text-muted-foreground hover:text-foreground",
                 )}
                 style={{ fontFamily: storeFontStack(key) }}
@@ -525,7 +522,7 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
           </div>
         </div>
 
-        <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+        <div className="flex items-start gap-3 border border-border p-3">
           <Switch
             id="store-balance"
             checked={form.customer_balance}
@@ -541,7 +538,7 @@ function StoreFormBody({ initial, onClose }: { initial: StoreForm; onClose: () =
           </div>
         </div>
 
-        <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+        <div className="flex items-start gap-3 border border-border p-3">
           <Switch
             id="store-skip-shipping"
             checked={form.skip_shipping}

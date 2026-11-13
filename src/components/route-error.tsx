@@ -31,14 +31,14 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
 
   if (expired) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <div className="size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-[50vh] items-center justify-center px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold text-foreground">{t("Esta página não carregou")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">

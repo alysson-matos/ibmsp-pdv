@@ -124,7 +124,7 @@ export function Pagination({
   if (pageCount <= 1) return null;
   const end = Math.min(start + pageSize, total);
   const buttonClass =
-    "inline-flex items-center gap-1 rounded-md border border-input px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40";
+    "inline-flex items-center gap-1 border border-input px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40";
 
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">

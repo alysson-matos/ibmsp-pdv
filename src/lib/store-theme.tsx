@@ -57,34 +57,13 @@ export function StoreFonts({ fonts }: { fonts: string[] }) {
 }
 
 /**
- * Applies a store's design to the whole page (including dialogs and toasts rendered
- * outside the app container): main color, a light tint on the background and the font.
+ * Marks the page with the store in use. The app has a single look (the retro
+ * desktop); the store only brings its color, exposed as --store and used on the
+ * masthead tile and the store cards. Its logo is shown by StoreLogo.
  */
 export function StoreThemeStyle({ store }: { store: ThemeLike }) {
   const c = /^#[0-9a-fA-F]{6}$/.test(store.color) ? store.color : DEFAULT_STORE_COLOR;
-  const fg = textOn(c);
-  const css = `
-:root:root {
-  --primary: ${c}; --primary-foreground: ${fg};
-  --ring: ${c}; --chart-1: ${c};
-  --sidebar-primary: ${c}; --sidebar-primary-foreground: ${fg}; --sidebar-ring: ${c};
-  --accent: color-mix(in oklch, ${c} 70%, black); --accent-foreground: oklch(0.98 0 0);
-  --background: color-mix(in oklch, ${c} 5%, oklch(0.985 0.003 250));
-  --secondary: color-mix(in oklch, ${c} 8%, oklch(0.95 0.006 250));
-  --font-sans: ${storeFontStack(store.font)};
-}
-:root:root.dark {
-  --accent: color-mix(in oklch, ${c} 70%, white); --accent-foreground: oklch(0.18 0.03 200);
-  --background: color-mix(in oklch, ${c} 6%, oklch(0.16 0.018 250));
-  --card: color-mix(in oklch, ${c} 4%, oklch(0.21 0.02 252));
-  --secondary: color-mix(in oklch, ${c} 10%, oklch(0.27 0.022 252));
-}`;
-  return (
-    <>
-      <StoreFonts fonts={[store.font]} />
-      <style>{css}</style>
-    </>
-  );
+  return <style>{`:root{--store:${c}}`}</style>;
 }
 
 /** The store's own logo, or the church logo painted in the store color. */

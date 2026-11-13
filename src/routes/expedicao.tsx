@@ -145,9 +145,9 @@ function ExpedicaoPage() {
   }, [sales, search]);
 
   return (
-    <main className="mx-auto max-w-[1600px] space-y-4 p-4">
+    <main className="w-full space-y-4">
       {store?.skip_shipping ? (
-        <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
+        <p className="border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
           {t(
             "Esta loja está marcada como Sem expedição: as vendas já saem entregues. O administrador pode mudar isso em Lojas > editar loja.",
           )}
@@ -206,7 +206,7 @@ function ExpedicaoPage() {
         />
       </div>
 
-      <section className="rounded-xl border border-border bg-card">
+      <section className="panel">
         <button
           type="button"
           onClick={() => setShowDelivered((v) => !v)}
@@ -254,8 +254,8 @@ function ExpedicaoPage() {
 }
 
 const toneStyle = {
-  primary: { bar: "border-t-primary", icon: "text-primary", badge: "bg-primary/15 text-primary" },
-  accent: { bar: "border-t-accent", icon: "text-accent", badge: "bg-accent/15 text-accent" },
+  primary: { bar: "border-t-primary", icon: "text-navy", badge: "pill info" },
+  accent: { bar: "border-t-accent", icon: "text-accent", badge: "pill ok" },
 } as const;
 
 function QueueColumn({
@@ -275,10 +275,7 @@ function QueueColumn({
   const style = toneStyle[tone];
   return (
     <section
-      className={cn(
-        "flex flex-col rounded-xl border border-t-4 border-border bg-secondary/30",
-        style.bar,
-      )}
+      className={cn("flex flex-col border border-t-4 border-border bg-secondary/30", style.bar)}
     >
       <header className="flex items-center gap-2 px-4 py-3">
         <Icon className={cn("size-5", style.icon)} />
@@ -323,14 +320,14 @@ function QueueCard({
 }) {
   const t = useT();
   return (
-    <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
+    <article className="panel p-4 shadow-sm">
       <div className="flex items-start gap-3">
         <span className="tabular grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-xs font-bold text-muted-foreground">
           {position}
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 truncate text-base font-semibold">
-            <User className="size-4 shrink-0 text-primary" />
+            <User className="size-4 shrink-0 text-navy" />
             {sale.customer_name || t("Sem nome")}
           </p>
           <p className="tabular text-xs text-muted-foreground">
@@ -345,7 +342,7 @@ function QueueCard({
           <li key={item.id} className="flex items-start justify-between gap-3">
             <span className="min-w-0">
               <span className="block truncate">
-                <span className="tabular font-semibold text-primary">{item.quantity}×</span>{" "}
+                <span className="tabular font-semibold text-navy">{item.quantity}×</span>{" "}
                 {item.product_name}
               </span>
               <span className="tabular block text-xs text-muted-foreground">

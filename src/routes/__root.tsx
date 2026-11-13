@@ -3,122 +3,45 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  useLocation,
   useRouter,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  ScanBarcode,
-  Boxes,
-  ReceiptText,
-  PackageCheck,
-  Users,
-  Lock,
-  LogOut,
-  ShieldCheck,
-  Sun,
-  Moon,
-  Store,
-  ArrowLeftRight,
-  Settings2,
-  Contact,
-} from "lucide-react";
 
 import { getAccess, unlock, lock, selectStore, type Access } from "../lib/gate.functions";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
-import logoAsset from "@/assets/logo-ibmemorial.png.asset.json";
-import { LanguageProvider, useI18n, useT, type Lang } from "@/i18n";
-import { ThemeProvider, themeInitScript, useTheme } from "@/hooks/use-theme";
+import { LanguageProvider, useI18n, useLocale, useT, type Lang } from "@/i18n";
 import { RouteError } from "@/components/route-error";
+import { Collage, Desk, EASE_OUT, Sprite, Win, useClock } from "@/components/retro";
 import { restartApp } from "@/lib/restart-app";
-import { StoreFonts, StoreLogo, StoreThemeStyle, storeFontStack } from "@/lib/store-theme";
+import { StoreLogo, StoreThemeStyle } from "@/lib/store-theme";
+import { cn } from "@/lib/utils";
 
-// The logo file is white on transparent; it's used as a mask so it can be painted
-// in the church color (#64a99c) and stay visible in both light and dark mode.
-const logoMask = {
-  maskImage: `url(${logoAsset.url})`,
-  WebkitMaskImage: `url(${logoAsset.url})`,
-  maskSize: "contain",
-  WebkitMaskSize: "contain",
-  maskRepeat: "no-repeat",
-  WebkitMaskRepeat: "no-repeat",
-  maskPosition: "center",
-  WebkitMaskPosition: "center",
-  backgroundColor: "#64a99c",
-} as const;
-
-function Logo({ className }: { className?: string }) {
-  return <div role="img" aria-label="PDV - IBMemorial" className={className} style={logoMask} />;
-}
-
-function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
-  const t = useT();
-  const label = theme === "dark" ? t("Modo claro") : t("Modo escuro");
-  return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      aria-label={label}
-      title={label}
-      className="flex items-center justify-center rounded-md border border-input p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-    >
-      {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-    </button>
-  );
-}
-
-function LanguageSwitcher() {
-  const { lang, setLang, t } = useI18n();
-  return (
-    <div
-      className="flex items-center gap-1 rounded-md border border-input p-0.5"
-      role="group"
-      aria-label={t("Idioma")}
-    >
-      {(["pt", "en"] as Lang[]).map((code) => (
-        <button
-          key={code}
-          type="button"
-          onClick={() => setLang(code)}
-          aria-pressed={lang === code}
-          className={`rounded px-2 py-1 text-xs font-semibold uppercase transition-colors ${
-            lang === code
-              ? "bg-secondary text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {code === "pt" ? "PT" : "EN"}
-        </button>
-      ))}
-    </div>
-  );
-}
+const CHURCH = "Igreja Batista Memorial de São Paulo";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Página não encontrada</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          A página que você procura não existe ou foi movida.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
+    <Desk className="center">
+      <Win className="narrow" title="404.EXE">
+        <div className="empty">
+          <Sprite name="box" size={48} />
+          <b className="num" style={{ fontSize: 46, lineHeight: 1 }}>
+            404
+          </b>
+          <span>A página que você procura não existe ou foi movida.</span>
+          <Link to="/" className="btn primary">
             Ir para o PDV
           </Link>
         </div>
-      </div>
-    </div>
+      </Win>
+    </Desk>
   );
 }
 
@@ -126,7 +49,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#1C8EEA" },
       { title: "PDV - IBMemorial" },
       {
         name: "description",
@@ -143,7 +67,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;1,800&family=Pixelify+Sans:wght@400;600;700&family=VT323&display=swap",
       },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
@@ -161,9 +85,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR" className="dark" suppressHydrationWarning>
+    <html lang="pt-BR">
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
       </head>
       <body>
@@ -178,7 +101,7 @@ const navItems = [
   {
     to: "/",
     label: "PDV",
-    icon: ScanBarcode,
+    sprite: "cart",
     manageOnly: false,
     balanceOnly: false,
     shippingOnly: false,
@@ -186,7 +109,7 @@ const navItems = [
   {
     to: "/expedicao",
     label: "Expedição",
-    icon: PackageCheck,
+    sprite: "box",
     manageOnly: false,
     balanceOnly: false,
     shippingOnly: true,
@@ -194,7 +117,7 @@ const navItems = [
   {
     to: "/historico",
     label: "Histórico",
-    icon: ReceiptText,
+    sprite: "chart",
     manageOnly: true,
     balanceOnly: false,
     shippingOnly: false,
@@ -202,7 +125,7 @@ const navItems = [
   {
     to: "/inventario",
     label: "Inventário",
-    icon: Boxes,
+    sprite: "shelf",
     manageOnly: true,
     balanceOnly: false,
     shippingOnly: false,
@@ -210,7 +133,7 @@ const navItems = [
   {
     to: "/clientes",
     label: "Clientes",
-    icon: Contact,
+    sprite: "coin",
     manageOnly: true,
     balanceOnly: true,
     shippingOnly: false,
@@ -218,7 +141,7 @@ const navItems = [
   {
     to: "/operadores",
     label: "Operadores",
-    icon: Users,
+    sprite: "kid",
     manageOnly: true,
     balanceOnly: false,
     shippingOnly: false,
@@ -227,9 +150,159 @@ const navItems = [
 
 const ADMIN_PATH = "/lojas";
 
+type TabItem = { to: string; label: string; sprite: string };
+type MenuItem =
+  | { kind: "link"; to: string; label: string; sprite: string }
+  | { kind: "action"; label: string; sprite: string; onClick: () => void }
+  | { kind: "sep" };
+
+/** F1–F4 open the first four tabs (F5 and up are left to the browser). */
+const FKEYS = ["F1", "F2", "F3", "F4"];
+
+/** Plays the window-opening and letter-pasting animation once, on first load. */
+function useBooting() {
+  const [booting, setBooting] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setBooting(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+  return booting;
+}
+
+function LangButtons() {
+  const { lang, setLang, t } = useI18n();
+  return (
+    <span role="group" aria-label={t("Idioma")}>
+      {(["pt", "en"] as Lang[]).map((code) => (
+        <button key={code} type="button" onClick={() => setLang(code)} aria-pressed={lang === code}>
+          {code.toUpperCase()}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+/** Taskbar with the Start menu, the title of the open window and the tray. */
+function Taskbar({
+  title,
+  status,
+  online = true,
+  side,
+  items,
+}: {
+  title: string;
+  status: string;
+  online?: boolean;
+  side: string;
+  items: MenuItem[];
+}) {
+  const t = useT();
+  const clock = useClock(useLocale());
+  const [menu, setMenu] = useState(false);
+  const startRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    menuRef.current?.querySelector<HTMLElement>("a,button")?.focus();
+    const close = (e: MouseEvent) => {
+      if (
+        !menuRef.current?.contains(e.target as Node) &&
+        !startRef.current?.contains(e.target as Node)
+      )
+        setMenu(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setMenu(false);
+        startRef.current?.focus();
+      }
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", esc, true);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", esc, true);
+    };
+  }, [menu]);
+
+  return (
+    <>
+      <footer className="taskbar" aria-label={t("Barra de tarefas")}>
+        <button
+          ref={startRef}
+          className="btn start"
+          aria-haspopup="true"
+          aria-expanded={menu}
+          disabled={items.length === 0}
+          onClick={() => setMenu((m) => !m)}
+        >
+          <span className="zlogo" aria-hidden="true">
+            M
+          </span>
+          {t("Iniciar")}
+        </button>
+        <div className="task-sep" aria-hidden="true" />
+        <div className="task-title sunken">{title}</div>
+        <div className="tray sunken" role="status" aria-live="polite">
+          <span className={cn("led", !online && "off")} />
+          <span className="st">{status}</span>
+          <LangButtons />
+          <span className="clock num">{clock}</span>
+        </div>
+      </footer>
+      <AnimatePresence>
+        {menu && (
+          <motion.div
+            ref={menuRef}
+            className="startmenu bevel"
+            initial={{ clipPath: "inset(100% 0 0 0)", opacity: 0 }}
+            animate={{ clipPath: "inset(0% 0 0 0)", opacity: 1 }}
+            exit={{ clipPath: "inset(100% 0 0 0)", opacity: 0 }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
+          >
+            <div className="side">{side}</div>
+            <ul>
+              {items.map((item, i) =>
+                item.kind === "sep" ? (
+                  <li key={i}>
+                    <hr />
+                  </li>
+                ) : item.kind === "link" ? (
+                  <li key={i}>
+                    <Link to={item.to} onClick={() => setMenu(false)}>
+                      <Sprite name={item.sprite} size={22} />
+                      {item.label}
+                    </Link>
+                  </li>
+                ) : (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenu(false);
+                        item.onClick();
+                      }}
+                    >
+                      <Sprite name={item.sprite} size={22} />
+                      {item.label}
+                    </button>
+                  </li>
+                ),
+              )}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 function UnlockScreen() {
   const router = useRouter();
   const t = useT();
+  const booting = useBooting();
   const unlockFn = useServerFn(unlock);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -253,77 +326,76 @@ function UnlockScreen() {
     }
   }
 
-  const inputClass =
-    "mt-3 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary";
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-4">
-      <Logo className="aspect-[2/1] w-full max-w-[23.8rem]" />
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg"
-      >
-        <div className="flex items-center gap-3 text-primary">
-          <Lock className="size-5" />
-          <div className="ml-auto flex items-center gap-2">
-            <ThemeToggle />
-            <LanguageSwitcher />
-          </div>
+    <>
+      <Desk className={cn("center", booting && "booting")}>
+        <div style={{ position: "relative", zIndex: 2 }}>
+          <Collage text="PDV" tail="M" />
         </div>
-
-        <h1 className="mt-4 text-lg font-semibold text-foreground">{t("Acesso restrito")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("Entre com seu usuário e senha.")}</p>
-        <input
-          type="text"
-          autoFocus
-          autoComplete="username"
-          autoCapitalize="none"
-          spellCheck={false}
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder={t("Usuário")}
-          aria-label={t("Usuário")}
-          className={inputClass}
-        />
-        <input
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={t("Senha")}
-          aria-label={t("Senha")}
-          className={inputClass}
-        />
-        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={loading || password.length === 0}
-          className="mt-4 w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-        >
-          {loading ? t("Verificando...") : t("Entrar")}
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function SignOutButton({ onSignOut, disabled }: { onSignOut: () => void; disabled: boolean }) {
-  const t = useT();
-  return (
-    <button
-      onClick={onSignOut}
-      disabled={disabled}
-      className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-    >
-      <LogOut className="size-3.5" />
-      <span className="hidden sm:inline">{t("Sair")}</span>
-    </button>
+        <Win className="narrow" title={`LOGIN.EXE — ${t("Acesso restrito")}`}>
+          <form onSubmit={onSubmit} className="grid gap-3 p-4">
+            <div className="flex items-center gap-3">
+              <Sprite name="key" size={44} />
+              <div>
+                <b>{t("Acesso restrito")}</b>
+                <div className="hint">{t("Entre com seu usuário e senha.")}</div>
+              </div>
+            </div>
+            <label className="field">
+              {t("Usuário")}
+              <input
+                className="input"
+                type="text"
+                autoFocus
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              {t("Senha")}
+              <input
+                className="input"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
+            {error ? (
+              <p role="alert" className="text-xs font-bold text-destructive">
+                {error}
+              </p>
+            ) : null}
+            <div className="dlg-actions">
+              <button
+                type="submit"
+                className="btn primary"
+                disabled={loading || password.length === 0}
+              >
+                {loading ? t("Verificando...") : t("Entrar")}
+              </button>
+            </div>
+          </form>
+        </Win>
+      </Desk>
+      <Taskbar
+        title={`PDV — ${CHURCH}`}
+        status={t("Aguardando login")}
+        online={false}
+        side="PDV"
+        items={[]}
+      />
+    </>
   );
 }
 
 function StorePicker({ access, onSignOut }: { access: Access; onSignOut: () => void }) {
   const t = useT();
   const router = useRouter();
+  const booting = useBooting();
   const { queryClient } = Route.useRouteContext();
   const selectFn = useServerFn(selectStore);
   const [entering, setEntering] = useState<string | null>(null);
@@ -345,105 +417,140 @@ function StorePicker({ access, onSignOut }: { access: Access; onSignOut: () => v
     }
   }
 
+  const items: MenuItem[] = [
+    ...(isAdmin
+      ? [
+          {
+            kind: "link" as const,
+            to: ADMIN_PATH,
+            label: t("Gerenciar lojas e usuários"),
+            sprite: "shop",
+          },
+          { kind: "sep" as const },
+        ]
+      : []),
+    { kind: "action", label: t("Sair"), sprite: "key", onClick: onSignOut },
+  ];
+
   return (
-    <div className="min-h-screen bg-background px-4 py-6">
-      <StoreFonts fonts={access.stores.map((s) => s.font)} />
-      <div className="mx-auto flex max-w-5xl items-center gap-2">
-        <Logo className="h-10 w-20 md:h-14 md:w-28" />
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <ThemeToggle />
-          <LanguageSwitcher />
-          <SignOutButton onSignOut={onSignOut} disabled={false} />
-        </div>
-      </div>
-
-      <main className="mx-auto mt-8 max-w-5xl">
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-          <Store className="size-6 text-primary" /> {t("Escolha a loja")}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("Olá, {name}. Em qual loja você vai trabalhar agora?", { name: access.userName })}
-        </p>
-        {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {access.stores.map((store) => (
-            <button
-              key={store.id}
-              type="button"
-              disabled={entering !== null}
-              onClick={() => enter(store.id)}
-              style={{ borderColor: store.color, fontFamily: storeFontStack(store.font) }}
-              className="relative flex flex-col items-center gap-4 overflow-hidden rounded-2xl border-2 bg-card p-6 pt-8 text-center shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"
-            >
-              <span
-                aria-hidden
-                className="absolute inset-x-0 top-0 h-2"
-                style={{ backgroundColor: store.color }}
-              />
-              <StoreLogo store={store} className="h-20 w-40" />
-              <span className="text-xl font-bold" style={{ color: store.color }}>
-                {store.name}
+    <>
+      <Desk className={cn(booting && "booting")}>
+        <Win title={`LOJAS.EXE — ${t("Escolha a loja")}`} label={t("Escolha a loja")}>
+          <header className="mast">
+            <Collage text="PDV" tail="M" />
+            <div className="mast-meta">
+              <div className="mast-sub">{CHURCH}</div>
+              <span className="chip">
+                <i />
+                {access.userName}
               </span>
-              {!store.active ? (
-                <span className="rounded-md bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
-                  {t("Inativa")}
-                </span>
-              ) : null}
-              {entering === store.id ? (
-                <span className="text-xs text-muted-foreground">{t("Entrando...")}</span>
-              ) : null}
-            </button>
-          ))}
+            </div>
+          </header>
+          <main className="view">
+            <h2 className="flex items-center gap-2 text-xl font-bold">
+              <Sprite name="shop" size={30} /> {t("Escolha a loja")}
+            </h2>
+            <p className="hint mt-1">
+              {t("Olá, {name}. Em qual loja você vai trabalhar agora?", { name: access.userName })}
+            </p>
+            {error ? (
+              <p role="alert" className="mt-3 text-sm font-bold text-destructive">
+                {error}
+              </p>
+            ) : null}
 
-          {isAdmin ? (
-            <Link
-              to={ADMIN_PATH}
-              className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border p-6 text-center text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
-            >
-              <Settings2 className="size-8" />
-              <span className="font-semibold">{t("Gerenciar lojas e usuários")}</span>
-            </Link>
-          ) : null}
-        </div>
+            <div className="storecards mt-5">
+              {access.stores.map((store, k) => (
+                <button
+                  key={store.id}
+                  type="button"
+                  className="storecard"
+                  disabled={entering !== null}
+                  onClick={() => enter(store.id)}
+                  style={{ "--rc": store.color, "--k": k } as CSSProperties}
+                >
+                  <StoreLogo store={store} className="h-16 w-32" />
+                  <b>{store.name}</b>
+                  {!store.active ? <span className="pill off">{t("Inativa")}</span> : null}
+                  {entering === store.id ? <span className="hint">{t("Entrando...")}</span> : null}
+                </button>
+              ))}
 
-        {access.stores.length === 0 && !isAdmin ? (
-          <p className="mt-6 rounded-xl border border-border bg-card px-4 py-12 text-center text-muted-foreground">
-            {t("Você ainda não tem acesso a nenhuma loja. Peça ao administrador para liberar.")}
-          </p>
-        ) : null}
-      </main>
-    </div>
+              {isAdmin ? (
+                <Link to={ADMIN_PATH} className="storecard dashed">
+                  <Sprite name="shop" size={44} />
+                  <span className="font-bold">{t("Gerenciar lojas e usuários")}</span>
+                </Link>
+              ) : null}
+            </div>
+
+            {access.stores.length === 0 && !isAdmin ? (
+              <div className="empty panel mt-5">
+                <Sprite name="key" size={40} />
+                {t("Você ainda não tem acesso a nenhuma loja. Peça ao administrador para liberar.")}
+              </div>
+            ) : null}
+          </main>
+        </Win>
+      </Desk>
+      <Taskbar
+        title={`PDV — ${t("Escolha a loja")}`}
+        status={access.userName}
+        side="PDV"
+        items={items}
+      />
+    </>
   );
 }
 
 function AccessDenied() {
   const t = useT();
   return (
-    <div className="mx-auto max-w-md px-4 py-24 text-center">
-      <h2 className="text-lg font-semibold text-foreground">{t("Acesso restrito")}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {t("Esta área é exclusiva do gerente da loja ou do administrador.")}
-      </p>
+    <div className="empty">
+      <Sprite name="key" size={44} />
+      <b>{t("Acesso restrito")}</b>
+      <span>{t("Esta área é exclusiva do gerente da loja ou do administrador.")}</span>
     </div>
   );
 }
 
 function RootComponent() {
   return (
-    <ThemeProvider>
-      <LanguageProvider>
+    <LanguageProvider>
+      <MotionConfig reducedMotion="user">
         <RootShellContent />
-      </LanguageProvider>
-    </ThemeProvider>
+        <canvas id="fx" className="fx" aria-hidden="true" />
+      </MotionConfig>
+    </LanguageProvider>
   );
 }
 
 function Spinner() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
-    </div>
+    <Desk className="center">
+      <div className="size-8 animate-spin rounded-full border-4 border-white/50 border-t-white" />
+    </Desk>
+  );
+}
+
+function Tabs({ tabs, pathname }: { tabs: TabItem[]; pathname: string }) {
+  const t = useT();
+  const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
+  return (
+    <nav className="tabs" aria-label={t("Seções")}>
+      {tabs.map((tab, i) => (
+        <Link
+          key={tab.to}
+          to={tab.to}
+          className="tab"
+          aria-selected={isActive(tab.to)}
+          aria-current={isActive(tab.to) ? "page" : undefined}
+        >
+          <Sprite name={tab.sprite} size={20} />
+          {tab.label} {FKEYS[i] ? <kbd>{FKEYS[i]}</kbd> : null}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -451,7 +558,9 @@ function RootShellContent() {
   const { queryClient } = Route.useRouteContext();
   const access = Route.useLoaderData() as Access | null;
   const router = useRouter();
+  const pathname = useLocation({ select: (l) => l.pathname });
   const t = useT();
+  const booting = useBooting();
   const lockFn = useServerFn(lock);
   const selectFn = useServerFn(selectStore);
   const [signingOut, setSigningOut] = useState(false);
@@ -487,37 +596,57 @@ function RootShellContent() {
     restartApp({ force: true });
   }
 
+  const isAdmin = access?.role === "admin";
+  const store = access?.store ?? null;
+  const canManage = !!store && store.storeRole !== "operacao";
+  const tabs: TabItem[] = [
+    ...(store
+      ? navItems.filter(
+          (item) =>
+            (canManage || !item.manageOnly) &&
+            (store.customer_balance || !item.balanceOnly) &&
+            (!store.skip_shipping || !item.shippingOnly),
+        )
+      : []
+    ).map((item) => ({ to: item.to, label: t(item.label), sprite: item.sprite })),
+    ...(isAdmin ? [{ to: ADMIN_PATH, label: t("Lojas"), sprite: "shop" }] : []),
+  ];
+
+  // F1–F4 switch tabs, like the function keys of a register.
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
+  const shellActive = !!access && !signingOut && !leaving;
+  useEffect(() => {
+    if (!shellActive) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tab = tabsRef.current[FKEYS.indexOf(e.key)];
+      if (!tab || e.altKey || e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      void router.navigate({ to: tab.to });
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [router, shellActive]);
+
   if (!access || signingOut) return <UnlockScreen />;
   if (leaving) return <Spinner />;
 
-  const isAdmin = access.role === "admin";
-  const store = access.store;
-  const currentPath = router.state.location.pathname;
-  const onAdminPage = currentPath.startsWith(ADMIN_PATH);
+  const onAdminPage = pathname.startsWith(ADMIN_PATH);
 
   if (!store && !(isAdmin && onAdminPage)) {
     return (
       <QueryClientProvider client={queryClient}>
         <StorePicker access={access} onSignOut={signOut} />
-        <Toaster position="top-center" richColors />
+        <Toaster position="top-center" />
       </QueryClientProvider>
     );
   }
 
-  const canManage = !!store && store.storeRole !== "operacao";
-  const visibleNav = store
-    ? navItems.filter(
-        (item) =>
-          (canManage || !item.manageOnly) &&
-          (store.customer_balance || !item.balanceOnly) &&
-          (!store.skip_shipping || !item.shippingOnly),
-      )
-    : [];
   // A user with a single store was sent straight into it; there's nothing to switch to.
   const canSwitch = isAdmin || access.stores.length > 1;
   const blocked = onAdminPage
     ? !isAdmin
-    : !canManage && navItems.some((item) => item.manageOnly && currentPath.startsWith(item.to));
+    : !canManage && navItems.some((item) => item.manageOnly && pathname.startsWith(item.to));
 
   const roleLabel = isAdmin
     ? t("Admin")
@@ -525,82 +654,73 @@ function RootShellContent() {
       ? t("Gerente")
       : t("Operação");
 
+  const placeName = store ? store.name : t("Administração");
+  const current =
+    tabs.find((tab) => (tab.to === "/" ? pathname === "/" : pathname.startsWith(tab.to)))?.label ??
+    placeName;
+  const switchLabel = store ? t("Trocar loja") : t("Escolher loja");
+
+  const items: MenuItem[] = [
+    ...tabs.map((tab) => ({ kind: "link" as const, ...tab })),
+    { kind: "sep" },
+    ...(canSwitch
+      ? [{ kind: "action" as const, label: switchLabel, sprite: "disk", onClick: leaveStore }]
+      : []),
+    { kind: "action", label: t("Sair"), sprite: "key", onClick: signOut },
+  ];
+
   return (
     <QueryClientProvider client={queryClient}>
       {store ? <StoreThemeStyle store={store} /> : null}
-      {/* overflow-x-clip keeps the page from sliding sideways on phones; unlike
-          overflow-hidden it doesn't break the sticky header. */}
-      <div className="min-h-screen overflow-x-clip bg-background">
-        <header className="sticky top-0 z-30 border-t-4 border-b border-t-primary border-b-border bg-card/80 backdrop-blur">
-          {/* On phones the menu drops to its own row and scrolls sideways by itself. */}
-          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2 md:h-20 md:flex-nowrap md:py-0">
-            <Link to={store ? "/" : ADMIN_PATH} className="flex min-w-0 items-center gap-3">
-              {store ? (
-                <StoreLogo store={store} className="h-10 w-20 shrink-0 md:h-14 md:w-28" />
-              ) : (
-                <Logo className="h-10 w-20 shrink-0 md:h-14 md:w-28" />
-              )}
-              <span className="max-w-40 truncate text-sm font-bold text-primary md:text-base">
-                {store ? store.name : t("Administração")}
+      <Desk className={cn(booting && "booting")}>
+        <Win
+          label={placeName}
+          title={`PDV_MEMORIAL.EXE — ${placeName}`}
+          menubar={
+            <div className="menubar" aria-hidden="true">
+              <span>
+                <u>A</u>rquivo
               </span>
-            </Link>
-
-            <nav className="order-last -mx-4 flex w-[calc(100%+2rem)] items-center gap-1 overflow-x-auto px-4 pb-1 md:order-none md:mx-0 md:w-auto md:overflow-visible md:px-0 md:pb-0">
-              {visibleNav.map(({ to, label, icon: Icon }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  activeOptions={{ exact: to === "/" }}
-                  className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                  activeProps={{ className: "bg-secondary !text-foreground font-semibold" }}
-                >
-                  <Icon className="size-4" />
-                  {t(label)}
-                </Link>
-              ))}
-              {isAdmin ? (
-                <Link
-                  to={ADMIN_PATH}
-                  className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                  activeProps={{ className: "bg-secondary !text-foreground font-semibold" }}
-                >
-                  <Settings2 className="size-4" />
-                  {t("Lojas")}
-                </Link>
-              ) : null}
-            </nav>
-            <div className="ml-auto flex items-center gap-2 sm:gap-3">
-              <ThemeToggle />
-              <LanguageSwitcher />
-              <span
-                className="hidden items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground xl:flex"
-                title={access.userName}
-              >
-                <ShieldCheck className="size-3.5" />
-                {roleLabel}
+              <span>
+                <u>C</u>aixa
               </span>
-
-              {canSwitch ? (
-                <button
-                  onClick={leaveStore}
-                  title={store ? t("Trocar loja") : t("Escolher loja")}
-                  className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                >
-                  <ArrowLeftRight className="size-3.5" />
-                  <span className="hidden sm:inline">
-                    {store ? t("Trocar loja") : t("Escolher loja")}
-                  </span>
-                </button>
-              ) : null}
-
-              <SignOutButton onSignOut={signOut} disabled={signingOut} />
+              <span>
+                <u>E</u>xibir
+              </span>
+              <span>
+                Aj<u>u</u>da
+              </span>
             </div>
-          </div>
-        </header>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        {blocked ? <AccessDenied /> : <Outlet />}
-      </div>
-      <Toaster position="top-center" richColors />
+          }
+        >
+          <header className="mast">
+            <Link
+              to={store ? "/" : ADMIN_PATH}
+              className="flex min-w-0 flex-wrap items-center gap-4"
+            >
+              {store?.logo ? <StoreLogo store={store} className="h-14 w-28 shrink-0" /> : null}
+              <Collage text={placeName.slice(0, 18)} tail={store ? undefined : "M"} />
+            </Link>
+            <div className="mast-meta">
+              <div className="mast-sub">PDV · {CHURCH}</div>
+              <span className="chip" title={access.userName}>
+                <i />
+                {roleLabel} · {access.userName}
+              </span>
+            </div>
+          </header>
+          <Tabs tabs={tabs} pathname={pathname} />
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <div className="view">{blocked ? <AccessDenied /> : <Outlet />}</div>
+        </Win>
+      </Desk>
+      <Taskbar
+        title={`${placeName} — ${current}`}
+        status={`${roleLabel} · ${access.userName}`}
+        side={placeName}
+        items={items}
+      />
+      <Toaster position="top-center" />
     </QueryClientProvider>
   );
 }

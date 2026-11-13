@@ -97,16 +97,16 @@ function OperadoresPage() {
 
 
   return (
-    <main className="mx-auto max-w-3xl p-4">
+    <main className="mx-auto w-full max-w-3xl">
       <h1 className="flex items-center gap-2 text-2xl font-bold">
-        <Users className="size-6 text-primary" /> {t("Operadores")}
+        <Users className="size-6 text-navy" /> {t("Operadores")}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {t("Cada venda é registrada com o operador que realizou o atendimento.")}
       </p>
 
       <form
-        className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4"
+        className="mt-4 flex flex-wrap items-end gap-3 panel p-4"
         onSubmit={(e) => {
           e.preventDefault();
           if (!name.trim()) {
@@ -132,7 +132,7 @@ function OperadoresPage() {
         </Button>
       </form>
 
-      <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+      <ul className="mt-4 divide-y divide-border overflow-hidden panel">
         {operators.map((op) => (
           <li key={op.id} className="flex items-center gap-3 px-4 py-3">
             {editingId === op.id ? (
@@ -160,8 +160,8 @@ function OperadoresPage() {
                 <span className="flex-1 font-medium">{op.name}</span>
                 <span
                   className={cn(
-                    "rounded-md px-2 py-1 text-xs",
-                    op.active ? "bg-accent/15 text-accent" : "bg-secondary text-muted-foreground",
+                    "px-2 py-1 text-xs",
+                    op.active ? "pill ok" : "bg-secondary text-muted-foreground",
                   )}
                 >
                   {op.active ? t("Ativo") : t("Inativo")}
