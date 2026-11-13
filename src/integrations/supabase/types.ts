@@ -475,6 +475,7 @@ export type Database = {
     Functions: {
       adjust_customer_balance: {
         Args: {
+          _client_key?: string
           _customer_id: string
           _delta: number
           _reason?: string

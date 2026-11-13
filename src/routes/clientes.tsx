@@ -7,7 +7,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Contact,
@@ -431,16 +431,29 @@ function BalanceForm({ customer, onClose }: { customer: Customer; onClose: () =>
   const [mode, setMode] = useState<"add" | "remove">("add");
   const [value, setValue] = useState("");
   const [reason, setReason] = useState("");
+  // Idempotency key of this change: created on the first attempt and kept across
+  // retries, so a change whose response was lost can't be applied twice. A new one is
+  // made each time the dialog opens (this form remounts).
+  const changeKey = useRef<string | null>(null);
 
   const amount = parseMoney(value);
   const valid = !Number.isNaN(amount) && amount > 0;
   const after = customer.balance + (valid ? (mode === "add" ? amount : -amount) : 0);
 
   const adjust = useMutation({
-    mutationFn: () =>
-      adjustFn({
-        data: { customer_id: customer.id, delta: mode === "add" ? amount : -amount, reason },
-      }),
+    mutationFn: () => {
+      // randomUUID only exists on secure pages (https or localhost); without it the
+      // change goes through as before, just without the protection against duplicates.
+      changeKey.current ??= globalThis.crypto?.randomUUID?.() ?? null;
+      return adjustFn({
+        data: {
+          customer_id: customer.id,
+          delta: mode === "add" ? amount : -amount,
+          reason,
+          ...(changeKey.current ? { client_key: changeKey.current } : {}),
+        },
+      });
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: customersQuery.queryKey });
       queryClient.invalidateQueries({ queryKey: ["customer-movements", customer.id] });
@@ -449,7 +462,12 @@ function BalanceForm({ customer, onClose }: { customer: Customer; onClose: () =>
       );
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      // The change may have gone through even so (lost response): show the real balance.
+      queryClient.invalidateQueries({ queryKey: customersQuery.queryKey });
+      queryClient.invalidateQueries({ queryKey: ["customer-movements", customer.id] });
+      toast.error(e.message);
+    },
   });
 
   return (
