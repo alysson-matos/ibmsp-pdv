@@ -177,6 +177,7 @@ export type Database = {
           barcode: string
           cost: number
           created_at: string
+          icon: string | null
           id: string
           min_stock: number
           name: string
@@ -190,6 +191,7 @@ export type Database = {
           barcode: string
           cost?: number
           created_at?: string
+          icon?: string | null
           id?: string
           min_stock?: number
           name: string
@@ -203,6 +205,7 @@ export type Database = {
           barcode?: string
           cost?: number
           created_at?: string
+          icon?: string | null
           id?: string
           min_stock?: number
           name?: string

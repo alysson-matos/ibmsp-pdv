@@ -85,6 +85,13 @@
       "when": 1794800100001,
       "tag": "0011_icone_produtos",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794800100002,
+      "tag": "0012_finalize_pending_product_icon_migration",
+      "breakpoints": true
     }
   ]
 }
