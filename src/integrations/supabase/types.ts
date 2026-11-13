@@ -433,7 +433,6 @@ export type Database = {
           id: string
           logo: string | null
           name: string
-          retro_look: boolean
           skip_shipping: boolean
           sort_order: number
           updated_at: string
@@ -447,7 +446,6 @@ export type Database = {
           id?: string
           logo?: string | null
           name: string
-          retro_look?: boolean
           skip_shipping?: boolean
           sort_order?: number
           updated_at?: string
@@ -461,7 +459,6 @@ export type Database = {
           id?: string
           logo?: string | null
           name?: string
-          retro_look?: boolean
           skip_shipping?: boolean
           sort_order?: number
           updated_at?: string
@@ -475,7 +472,6 @@ export type Database = {
     Functions: {
       adjust_customer_balance: {
         Args: {
-          _client_key?: string
           _customer_id: string
           _delta: number
           _reason?: string
@@ -486,7 +482,6 @@ export type Database = {
       checkout_sale: {
         Args: {
           _amount_received?: number
-          _client_key?: string
           _customer_id?: string
           _customer_name?: string
           _discount?: number
