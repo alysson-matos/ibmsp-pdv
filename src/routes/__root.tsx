@@ -3,7 +3,7 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
-  useLocation,
+  useRouterState,
   useRouter,
   HeadContent,
   Scripts,
@@ -469,7 +469,13 @@ function RootShellContent() {
   const { queryClient } = Route.useRouteContext();
   const access = Route.useLoaderData() as Access | null;
   const router = useRouter();
-  const pathname = useLocation({ select: (l) => l.pathname });
+  // The page on screen, not the one being navigated to: useLocation() switches to the
+  // new path as soon as a navigation starts, while <Outlet /> still shows the old route.
+  // From the store picker to /lojas that rendered the PDV without a store for a moment,
+  // its product query failed with "Sessão expirada" and the app restarted to the picker.
+  const pathname = useRouterState({
+    select: (s) => (s.resolvedLocation ?? s.location).pathname,
+  });
   const t = useT();
   const lockFn = useServerFn(lock);
   const selectFn = useServerFn(selectStore);
